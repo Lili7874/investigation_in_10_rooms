@@ -1,0 +1,21 @@
+body {
+    background-color: #13022e;
+    margin: 0;
+    overflow: hidden; /* Zapobiega przewijaniu */
+}
+
+#game-container {
+  visibility: visible;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1; /* Wideo pod spodem */
+  pointer-events: none; /* Pozwala klikać UI nad grą */
+}
+
+#root {
+  display: block; /* Kontener Reacta będzie widoczny na początku */
+}
+
