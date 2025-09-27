@@ -303,7 +303,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     this.dialogPanel = this.add.rectangle(width / 1.85, height - 30, width * 0.8, 100, 0x000000, 0.8)
       .setStrokeStyle(2, 0xffffff).setOrigin(0.5, 1);
     this.dialogText = this.add.text(width * 0.2, height - 120, '', {
-      fontSize: '20px', fill: '#ffffff', fontFamily: 'Monaco, monospace', wordWrap: { width: width * 0.6 },
+      fontSize: '20px', fill: '#ffffff', fontFamily: 'Monaco, monospace', wordWrap: { width: width * 0.7 },
     }).setOrigin(0, 0);
     this.avatarImage = this.add.circle(width * 0.09, height - 80, 120, 0xffffff);
     this.dialogPanel.visible = this.dialogText.visible = this.avatarImage.visible = false;
