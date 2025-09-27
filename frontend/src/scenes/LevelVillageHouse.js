@@ -72,12 +72,14 @@ Twoim zadaniem jest odkrycie, który z czterech podejrzanych miał motyw i okazj
         { key: 'character5', src: character5, text: 'Ktoś wyskoczył przez okno… bałem się.', avatar: { key: 'avatar5', src: avatar5 } }, // Michał
       ],
 
-      // === PRZEDMIOTY (4) ===
+      // === PRZEDMIOTY (4) – ROZSZERZONE PODPOWIEDZI (poziom 3) ===
       items: [
         {
           key: 'sznur_drewno',
           name: 'Sznur do wiązania drewna',
-          text: 'Przy kominku; włókna z śladami naciągnięcia i sadzą — zgodne z duszeniem.',
+          text: [
+            'Leży przy stojaku na polana. Włókna spłaszczone co ~6–7 mm – jak po mocnym zacisku. Mikroziarna sadzy i żywicy wkręcone w skręt; jeden koniec z luźnym węzłem prostym. Ślad naciągu silniejszy po prawej stronie. Wskazówka: zestaw z „Kominek” (sadza) oraz „Rękawiczki robocze” (ułatwiają pewny chwyt).'
+          ].join('\n'),
           src: require('../assets/items/sznur.png'),
           avatar: { key: 'sznur_drewno', src: require('../assets/items/sznur.png') },
           scale: 0.05,
@@ -85,7 +87,11 @@ Twoim zadaniem jest odkrycie, który z czterech podejrzanych miał motyw i okazj
         {
           key: 'ksiegi_schowek',
           name: 'Stare księgi (wydrążony schowek)',
-          text: 'Wnętrze puste; na krawędziach świeża sadza — ktoś szukał dokumentów.',
+          text: [
+            'Wnętrze puste; na krawędziach świeża sadza i przerwany „kożuch” kurzu – ktoś grzebał niedawno.',
+            'Odciśnięty prostokąt po pakiecie dokumentów; strony przy brzegu lekko zakopcone.',
+            'Wskazówka: łącz z „Kominek” (źródło sadzy) i trasą „Ślady błota”.'
+          ].join('\n'),
           src: require('../assets/items/ksiegi.png'),
           avatar: { key: 'ksiegi_schowek', src: require('../assets/items/ksiegi.png') },
           scale: 0.05,
@@ -93,7 +99,12 @@ Twoim zadaniem jest odkrycie, który z czterech podejrzanych miał motyw i okazj
         {
           key: 'rekawiczki_sadza',
           name: 'Rękawiczki robocze z sadzą',
-          text: 'Odłożone przy przewróconym krześle; rozmiar i zużycie jak u osoby „od kominka”.',
+          text: [
+            'Zostawione obok przewróconego krzesła; rozmiar duży, wytarte kostki palców.',
+            'Wnętrze zabrudzone sadzą – ręce były już czarne przed ich zdjęciem.',
+            'Na palcach mikrowłókna podobne do przędzy sznurka.',
+            'Wskazówka: skojarz z „Sznur do wiązania drewna” oraz czynnościami przy kominku.'
+          ].join('\n'),
           src: require('../assets/items/rekawiczki.png'),
           avatar: { key: 'rekawiczki_sadza', src: require('../assets/items/rekawiczki.png') },
           scale: 0.05,
@@ -101,19 +112,25 @@ Twoim zadaniem jest odkrycie, który z czterech podejrzanych miał motyw i okazj
         {
           key: 'slady_blota',
           name: 'Ślady błota',
-          text: 'Wyraźna linia od drzwi do kominka; wzór podeszwy jak w starych kaloszach.',
+          text: [
+            'Ciąg od przedsionka, przez salon, pod sam kominek. Zawrotka z powrotem w stronę drzwi. Wzór podeszwy „rybia łuska” typowy dla kaloszy; długość kroku i rozmiar ~44–45. Wskazówka: zestaw z „Przedsionek / drzwi” (początek) i aktywnością przy kominku (cel trasy).'
+          ].join('\n'),
           src: require('../assets/items/slady_blota.png'),
           avatar: { key: 'slady_blota', src: require('../assets/items/slady_blota.png') },
           scale: 0.05,
         },
       ],
 
-      // === MIEJSCA (4) ===
+      // === MIEJSCA (4) – ROZSZERZONE PODPOWIEDZI (poziom 3) ===
       places: [
         {
           key: 'salon',
           name: 'Salon',
-          text: 'Miejsce zbrodni; przewrócone krzesło i oznaki szarpaniny.',
+          text: [
+            'Miejsce zbrodni. Dywan z przesuniętym runem (ciągnięcie), krzesło przewrócone w stronę kominka.',
+            'Na podłodze dwa ślizgowe ślady obuwia – krótkie szarpnięcie.',
+            'Wskazówka: połącz z „Sznur do wiązania drewna” (użyty w szarpaninie).'
+          ].join('\n'),
           src: require('../assets/places/salon.png'),
           avatar: { key: 'salon', src: require('../assets/places/salon.png') },
           scale: 0.05,
@@ -121,7 +138,11 @@ Twoim zadaniem jest odkrycie, który z czterech podejrzanych miał motyw i okazj
         {
           key: 'kominek',
           name: 'Kominek',
-          text: 'Punkt poszukiwań dokumentów; sadza na sznurze i księgach.',
+          text: [
+            'Popiół świeżo naruszony; kosz z polanami przestawiony.',
+            'Na obrzeżu czarne smugi zgodne z zabrudzeniami na sznurze i rękawiczkach.',
+            'Wskazówka: to „stacja pośrednia” między schowkiem w księgach a miejscem szarpaniny.'
+          ].join('\n'),
           src: require('../assets/places/kominek.png'),
           avatar: { key: 'kominek', src: require('../assets/places/kominek.png') },
           scale: 0.05,
@@ -129,7 +150,11 @@ Twoim zadaniem jest odkrycie, który z czterech podejrzanych miał motyw i okazj
         {
           key: 'okno_wybite',
           name: 'Wybite okno',
-          text: 'Droga ucieczki obserwowana przez świadka; możliwy fałszywy trop.',
+          text: [
+            'Większość odłamków szkła na zewnątrz, rysa na parapecie od strony wnętrza.',
+            'Zasłona zahaczona do środka – wybicie mogło nastąpić od wewnątrz.',
+            'Wskazówka: fałszywy trop włamania; skonfrontuj ze „Ślady błota” (kierunek ruchu po domu).'
+          ].join('\n'),
           src: require('../assets/places/okno.png'),
           avatar: { key: 'okno_wybite', src: require('../assets/places/okno.png') },
           scale: 0.05,
@@ -137,7 +162,11 @@ Twoim zadaniem jest odkrycie, który z czterech podejrzanych miał motyw i okazj
         {
           key: 'przedsionek',
           name: 'Przedsionek / drzwi wejściowe',
-          text: 'Początek ciągu błotnistych śladów prowadzących pod kominek.',
+          text: [
+            'Błoto zaczyna się już na wycieraczce; woda skapuje z krawędzi – wejście niedługo przed zdarzeniem.',
+            'Ślady zgodne z kierunkiem do salonu i kominka.',
+            'Wskazówka: punkt startowy trasy „Ślady błota”.'
+          ].join('\n'),
           src: require('../assets/places/przedsionek.png'),
           avatar: { key: 'przedsionek', src: require('../assets/places/przedsionek.png') },
           scale: 0.05,
