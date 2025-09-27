@@ -300,7 +300,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
   // ------------- DIALOG PANEL -------------
   createDialogPanel() {
     const { width, height } = this.sys.game.canvas;
-    this.dialogPanel = this.add.rectangle(width / 1.85, height - 50, width * 0.8, 100, 0x000000, 0.8)
+    this.dialogPanel = this.add.rectangle(width / 1.85, height - 30, width * 0.8, 100, 0x000000, 0.8)
       .setStrokeStyle(2, 0xffffff).setOrigin(0.5, 1);
     this.dialogText = this.add.text(width * 0.2, height - 120, '', {
       fontSize: '20px', fill: '#ffffff', fontFamily: 'Monaco, monospace', wordWrap: { width: width * 0.6 },
