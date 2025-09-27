@@ -1,3 +1,4 @@
+// src/scenes/LevelHospital.js
 /* 
 Rozstrzygnięcie (ukryta prawda – poziom 8)
 
@@ -66,19 +67,24 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto z czwórki podejr
 
       // === POSTACIE ===
       characters: [
-        { key: 'character1', src: character1, text: 'Widziałam coś podejrzanego!', avatar: { key: 'avatar1', src: avatar1 } },  // Anna
-        { key: 'character2', src: character2, text: 'Nie wiem, czy mogę pomóc...', avatar: { key: 'avatar2', src: avatar2 } },   // Tomasz
-        { key: 'character3', src: character3, text: 'To było straszne!', avatar: { key: 'avatar3', src: avatar3 } },   // Weronika
-        { key: 'character4', src: character4, text: 'Ktoś tu był przed tobą...', avatar: { key: 'avatar4', src: avatar4 } },   // Kacper
-        { key: 'character5', src: character5, text: 'Musisz się pośpieszyć!', avatar: { key: 'avatar5', src: avatar5 } },   // Marzena
+        { key: 'character1', src: character1, text: 'Widziałam coś podejrzanego!', avatar: { key: 'avatar1', src: avatar1 } },
+        { key: 'character2', src: character2, text: 'Nie wiem, czy mogę pomóc...', avatar: { key: 'avatar2', src: avatar2 } },
+        { key: 'character3', src: character3, text: 'To było straszne!', avatar: { key: 'avatar3', src: avatar3 } },
+        { key: 'character4', src: character4, text: 'Ktoś tu był przed tobą...', avatar: { key: 'avatar4', src: avatar4 } },
+        { key: 'character5', src: character5, text: 'Musisz się pośpieszyć!', avatar: { key: 'avatar5', src: avatar5 } },
       ],
 
-      // === PRZEDMIOTY (opis + grafika; rozmiar przez scale) ===
+      // === PRZEDMIOTY (4) — ROZSZERZONE PODPOWIEDZI (poziom 8) ===
       items: [
         {
           key: 'kroplowka',
           name: 'Kroplówka',
-          text: 'Linia infuzyjna przy łóżku ofiary. Ślady manipulacji przy zacisku; świadek widział tu „pracownika” w rękawiczkach.',
+          text: [
+            'Zacisk z mikrorysami od pazura rękawiczki; ślad talcu na wężyku.',
+            'Tempo infuzji zmienione krótko przed zgonem — wpis w monitorze jest niespójny z kartą.',
+            'Świadek widział osobę w masce i rękawiczkach przy łóżku.',
+            'Wskazówka: sprawca podszył się pod personel i działał manualnie w „Sali pacjenta”.'
+          ].join('\n'),
           src: require('../assets/items/kroplowka.png'),
           avatar: { key: 'kroplowka', src: require('../assets/items/kroplowka.png') },
           scale: 0.05,
@@ -86,7 +92,11 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto z czwórki podejr
         {
           key: 'identyfikator_podrobiony',
           name: 'Podrobiony identyfikator',
-          text: 'Id Weroniki. Nie zgadza się numer oddziału oraz stempel czasu – zbyt „czyste” podłożenie.',
+          text: [
+            'Id Weroniki: numer oddziału niezgodny z bieżącą obsadą; świeża laminacja, brak śladów zużycia taśmy.',
+            'Timestamp na karcie nie pokrywa się z logiem wejść na oddział.',
+            'Wskazówka: „zbyt czyste” — atrakcyjny lecz mylący dowód.'
+          ].join('\n'),
           src: require('../assets/items/identyfikator.png'),
           avatar: { key: 'identyfikator', src: require('../assets/items/identyfikator.png') },
           scale: 0.05,
@@ -94,7 +104,11 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto z czwórki podejr
         {
           key: 'dokumenty_pacjenta',
           name: 'Dokumenty pacjenta',
-          text: 'Rozsypane na stoliku medycznym; brak części strony z listą odwiedzin.',
+          text: [
+            'Brakuje fragmentu strony z listą odwiedzin; rogi kart nasączone środkiem dezynfekującym.',
+            'Notatka pielęgniarska urywa się przed zmianą prędkości infuzji.',
+            'Wskazówka: ktoś manipulował dokumentacją, by rozmyć okno czasu.'
+          ].join('\n'),
           src: require('../assets/items/dokumenty.png'),
           avatar: { key: 'dokumenty', src: require('../assets/items/dokumenty.png') },
           scale: 0.05,
@@ -102,19 +116,28 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto z czwórki podejr
         {
           key: 'paczka_papierosow',
           name: 'Paczka papierosów z korytarza',
-          text: 'Znaleziona przy windach, obok świeże niedopałki; pasuje do kogoś, kto palił z nerwów mimo zakazu.',
+          text: [
+            'Leży przy windach; dwa świeże niedopałki i wyczuwalny zapach dymu mimo zakazu.',
+            'Miejsce w martwym punkcie kamer, blisko zejścia na oddział.',
+            'Korelacja: świadek widzi „personel” przy kroplówce, a chwilę wcześniej czuć dym na korytarzu.',
+            'Wskazówka (klucz): nerwowe palenie łączy się z Anną widzianą przy „Pokoju pielęgniarek”.'
+          ].join('\n'),
           src: require('../assets/items/papierosy.png'),
           avatar: { key: 'paczka_papierosow', src: require('../assets/items/papierosy.png') },
           scale: 0.05,
         },
       ],
 
-      // === MIEJSCA (jak itemy – interaktywne elementy) ===
+      // === MIEJSCA (4) — ROZSZERZONE PODPOWIEDZI (poziom 8) ===
       places: [
         {
           key: 'sala_pacjenta',
           name: 'Sala pacjenta',
-          text: 'Miejsce zbrodni. Aparatura wyłączona manualnie; przy łóżku ślady po rękawiczkach.',
+          text: [
+            'Miejsce zbrodni: aparatura wyłączona manualnie; kabel zasilania z odciskiem talku z rękawic.',
+            'Przesunięte barierki łóżka i odciśnięty but na wykładzinie przy kroplówce.',
+            'Wskazówka: tu doszło do decydującej manipulacji, nie na OIOM-ie.'
+          ].join('\n'),
           src: require('../assets/places/sala_pacjenta.png'),
           avatar: { key: 'sala_pacjenta', src: require('../assets/places/sala_pacjenta.png') },
           scale: 0.05,
@@ -122,7 +145,11 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto z czwórki podejr
         {
           key: 'pokoj_pielegniarek',
           name: 'Pokój pielęgniarek',
-          text: 'Widziano tu Annę. W koszu resztki jednorazowego sprzętu ochronnego.',
+          text: [
+            'W koszu resztki jednorazowych rękawic i masek; brakuje jednego kompletu M.',
+            'Świadkowie kojarzą tu Annę chwilę przed zdarzeniem.',
+            'Wskazówka: możliwe źródło „przebrania” sprawcy.'
+          ].join('\n'),
           src: require('../assets/places/pokoj_pielegniarek.png'),
           avatar: { key: 'pokoj_pielegniarek', src: require('../assets/places/pokoj_pielegniarek.png') },
           scale: 0.05,
@@ -130,7 +157,10 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto z czwórki podejr
         {
           key: 'oiom',
           name: 'Oddział intensywnej terapii',
-          text: 'Tomasz był tu widziany; brak jego śladów przy sali pacjenta.',
+          text: [
+            'Tomasz widziany na korytarzu OIOM-u; brak jego śladów w „Sali pacjenta”.',
+            'Wskazówka: silny, ale fałszywy trop — obecność ≠ sprawstwo.'
+          ].join('\n'),
           src: require('../assets/places/oiom.png'),
           avatar: { key: 'oiom', src: require('../assets/places/oiom.png') },
           scale: 0.05,
@@ -138,7 +168,11 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto z czwórki podejr
         {
           key: 'korytarz_windy',
           name: 'Korytarz przy windach',
-          text: 'Zapach świeżo zgaszonych papierosów; obok leżała paczka papierosów i niedopałki.',
+          text: [
+            'Zapach świeżo zgaszonych papierosów; znaleziono paczkę i niedopałki.',
+            'Rejon z ograniczonym zasięgiem kamer; łączy szlak z „Pokoju pielęgniarek” do „Sali pacjenta”.',
+            'Wskazówka: zachowanie pod wpływem stresu (palenie) spina się z oknem czasowym zbrodni.'
+          ].join('\n'),
           src: require('../assets/places/korytarz_windy.png'),
           avatar: { key: 'korytarz_windy', src: require('../assets/places/korytarz_windy.png') },
           scale: 0.05,
@@ -176,3 +210,4 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto z czwórki podejr
     });
   }
 }
+
