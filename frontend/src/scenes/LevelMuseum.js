@@ -66,19 +66,24 @@ Twoim zadaniem jest ustalenie, kto znał zabezpieczenia i miał okazję, by ukra
 
       // === POSTACIE ===
       characters: [
-        { key: 'character1', src: character1, text: 'Byłam zaproszona — tylko rozmawiałam przez telefon.', avatar: { key: 'avatar1', src: avatar1 } }, // Anna
-        { key: 'character2', src: character2, text: 'Przyszłam drugi raz, bo… chciałam jeszcze raz zobaczyć ekspozycję.', avatar: { key: 'avatar2', src: avatar2 } }, // Marzena
-        { key: 'character3', src: character3, text: 'Robiłem zdjęcia do projektu! Mój aparat zniknął!', avatar: { key: 'avatar3', src: avatar3 } }, // Kacper
-        { key: 'character4', src: character4, text: 'Nie mam z tym nic wspólnego, serio.', avatar: { key: 'avatar4', src: avatar4 } }, // Tomasz
-        { key: 'character5', src: character5, text: 'Słyszałam brzęk szkła, zanim zawył alarm…', avatar: { key: 'avatar5', src: avatar5 } }, // Weronika
+        { key: 'character1', src: character1, text: 'Byłam zaproszona — tylko rozmawiałam przez telefon.', avatar: { key: 'avatar1', src: avatar1 } },
+        { key: 'character2', src: character2, text: 'Przyszłam drugi raz, bo… chciałam jeszcze raz zobaczyć ekspozycję.', avatar: { key: 'avatar2', src: avatar2 } },
+        { key: 'character3', src: character3, text: 'Robiłem zdjęcia do projektu! Mój aparat zniknął!', avatar: { key: 'avatar3', src: avatar3 } },
+        { key: 'character4', src: character4, text: 'Nie mam z tym nic wspólnego, serio.', avatar: { key: 'avatar4', src: avatar4 } },
+        { key: 'character5', src: character5, text: 'Słyszałam brzęk szkła, zanim zawył alarm…', avatar: { key: 'avatar5', src: avatar5 } },
       ],
 
-      // === PRZEDMIOTY (4) ===
+      // === PRZEDMIOTY (4) — ROZSZERZONE PODPOWIEDZI (poziom 6) ===
       items: [
         {
           key: 'dziennik_alarmow',
           name: 'Dziennik alarmów (wejście techniczne)',
-          text: 'Krótka dezaktywacja strefy tuż przed alarmem; log wskazuje na panel przy wejściu technicznym.',
+          text: [
+            'Rejestr: krótkie rozbrojenie strefy w oknie tuż przed alarmem (czas pokrywa się z K-4).',
+            'Operacja z panelu przy wejściu technicznym — wymaga znajomości kodu/procedury.',
+            'Brak błędów/„fałszywek” tuż przed — działanie celowe, nie przypadkowe.',
+            'Wskazówka: połącz z miejscem „Wejście techniczne (panel)” i obecnością z „Listy VIP”.'
+          ].join('\n'),
           src: require('../assets/items/dziennik_alarmow.png'),
           avatar: { key: 'dziennik_alarmow', src: require('../assets/items/dziennik_alarmow.png') },
           scale: 0.05,
@@ -86,7 +91,12 @@ Twoim zadaniem jest ustalenie, kto znał zabezpieczenia i miał okazję, by ukra
         {
           key: 'odlamki_czujnika',
           name: 'Odłamki czujnika ruchu',
-          text: 'Szkło z osłony czujnika w sali ekspozycji; świadek słyszał brzęk kilka minut przed alarmem.',
+          text: [
+            'Szkło z osłony czujnika leży wachlarzem pod ścianą — świeże, bez kurzu.',
+            'Brak jednej śruby montażowej; stopa czujnika zarysowana narzędziem.',
+            'Korelacja: świadek słyszy brzęk szkła kilka minut przed alarmem.',
+            'Wskazówka: start sekwencji sabotażu w „Sali głównej ekspozycji”.'
+          ].join('\n'),
           src: require('../assets/items/odlamki.png'),
           avatar: { key: 'odlamki_czujnika', src: require('../assets/items/odlamki.png') },
           scale: 0.05,
@@ -94,7 +104,12 @@ Twoim zadaniem jest ustalenie, kto znał zabezpieczenia i miał okazję, by ukra
         {
           key: 'nagranie_k4',
           name: 'Nagranie K-4 (korytarz techniczny)',
-          text: 'Poruszona sylwetka przy panelu; twarz zasłonięta telefonem.',
+          text: [
+            'Poruszona sylwetka przy panelu; twarz zasłonięta telefonem.',
+            'Ruch dłoni na wysokości klawiatury panelu — sekwencja wpisu krótka i pewna.',
+            'Brak charakterystycznych ubrań; kształt przypinki identyczny jak przepustki VIP.',
+            'Wskazówka: zgrywa się czasowo z wpisem w „Dzienniku alarmów”.'
+          ].join('\n'),
           src: require('../assets/items/kamera.png'),
           avatar: { key: 'nagranie_k4', src: require('../assets/items/kamera.png') },
           scale: 0.05,
@@ -102,19 +117,27 @@ Twoim zadaniem jest ustalenie, kto znał zabezpieczenia i miał okazję, by ukra
         {
           key: 'lista_vip',
           name: 'Lista zaproszeń VIP',
-          text: 'Nazwisko Anny figuruje jako gość dyrektora — pretekst do obecności przy wejściu technicznym.',
+          text: [
+            'Nazwisko Anny figuruje jako gość dyrektora; status „backstage escort allowed”.',
+            'Przepustka usprawiedliwia obecność w pobliżu wejścia technicznego.',
+            'Wskazówka: daje pretekst do przebywania przy panelu, ale nie tłumaczy braku wahania w obsłudze — szukaj kogoś z pewnością ruchu (K-4).'
+          ].join('\n'),
           src: require('../assets/items/lista_vip.png'),
           avatar: { key: 'lista_vip', src: require('../assets/items/lista_vip.png') },
           scale: 0.05,
         },
       ],
 
-      // === MIEJSCA (4) ===
+      // === MIEJSCA (4) — ROZSZERZONE PODPOWIEDZI (poziom 6) ===
       places: [
         {
           key: 'sala_ekspozycji',
           name: 'Sala główna ekspozycji',
-          text: 'Rozbity czujnik; punkt startowy kradzieży obrazu.',
+          text: [
+            'Rozbity czujnik przy wejściu do sektora z obrazem; pierwsze ogniwo sabotażu.',
+            'Brak śladów włamania do gablot — sprawca chciał wyłączyć czujki, nie niszczyć gablot.',
+            'Wskazówka: koreluj z „Odłamki czujnika” i czasem z relacji świadka.'
+          ].join('\n'),
           src: require('../assets/places/sala_ekspozycji.png'),
           avatar: { key: 'sala_ekspozycji', src: require('../assets/places/sala_ekspozycji.png') },
           scale: 0.05,
@@ -122,7 +145,11 @@ Twoim zadaniem jest ustalenie, kto znał zabezpieczenia i miał okazję, by ukra
         {
           key: 'drzwi_awaryjne',
           name: 'Drzwi awaryjne',
-          text: 'Miejsce znalezienia ciała strażnika; pośpieszna próba wyniesienia łupu.',
+          text: [
+            'Miejsce znalezienia ciała strażnika; ślady pośpiechu na listwie i ościeżnicy.',
+            'Odbicia butów w kierunku zewnętrznym; próba wyniesienia łupu przerwana interwencją.',
+            'Wskazówka: to faktyczne miejsce zbrodni w tej sekwencji zdarzeń.'
+          ].join('\n'),
           src: require('../assets/places/drzwi_awaryjne.png'),
           avatar: { key: 'drzwi_awaryjne', src: require('../assets/places/drzwi_awaryjne.png') },
           scale: 0.05,
@@ -130,7 +157,11 @@ Twoim zadaniem jest ustalenie, kto znał zabezpieczenia i miał okazję, by ukra
         {
           key: 'wejscie_techniczne',
           name: 'Wejście techniczne (panel)',
-          text: 'Panel alarmu; log rozbrojenia odpowiada temu punktowi.',
+          text: [
+            'Panel alarmu z klawiaturą; osłona uchylona niedawno (brak kurzu na krawędzi).',
+            'Smugi na klawiszu „ENTER”; ślady dotyku na pokrywie serwisowej.',
+            'Wskazówka: łączy „Dziennik alarmów” z „Nagranie K-4”.'
+          ].join('\n'),
           src: require('../assets/places/wejscie_techniczne.png'),
           avatar: { key: 'wejscie_techniczne', src: require('../assets/places/wejscie_techniczne.png') },
           scale: 0.05,
@@ -138,7 +169,10 @@ Twoim zadaniem jest ustalenie, kto znał zabezpieczenia i miał okazję, by ukra
         {
           key: 'magazyn_zaplecze',
           name: 'Magazyn / zaplecze',
-          text: 'Widziano tu Tomasza; brak śladów przy sejfach tej nocy.',
+          text: [
+            'Widziano tu Tomasza; jednak plomby i sejfy nienaruszone.',
+            'Wskazówka: mocny trop poboczny — nie spina się z czasem dziennika i K-4.'
+          ].join('\n'),
           src: require('../assets/places/magazyn_zaplecze.png'),
           avatar: { key: 'magazyn_zaplecze', src: require('../assets/places/magazyn_zaplecze.png') },
           scale: 0.05,
