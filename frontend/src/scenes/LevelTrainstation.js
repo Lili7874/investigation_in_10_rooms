@@ -65,19 +65,21 @@ Ustal, kto z czterech podejrzanych miał realną możliwość przejęcia teczki 
 
       // === POSTACIE ===
       characters: [
-        { key: 'character1', src: character1, text: 'Czekałam na kuriera… naprawdę.',     avatar: { key: 'avatar1', src: avatar1 } }, // Anna
-        { key: 'character2', src: character2, text: 'Tylko zajrzałem do walizki, nic więcej.', avatar: { key: 'avatar2', src: avatar2 } }, // Tomasz
-        { key: 'character3', src: character3, text: 'Pytałam tylko o rozkład pociągów.',   avatar: { key: 'avatar3', src: avatar3 } }, // Weronika
-        { key: 'character4', src: character4, text: 'Przyszedłem po kolegę, serio.',       avatar: { key: 'avatar4', src: avatar4 } }, // Kacper
-        { key: 'character5', src: character5, text: 'Ktoś wszedł od zaplecza, widziałam.', avatar: { key: 'avatar5', src: avatar5 } }, // Julia
+        { key: 'character1', src: character1, text: 'Czekałam na kuriera… naprawdę.',            avatar: { key: 'avatar1', src: avatar1 } }, // Anna
+        { key: 'character2', src: character2, text: 'Tylko zajrzałem do walizki, nic więcej.',   avatar: { key: 'avatar2', src: avatar2 } }, // Tomasz
+        { key: 'character3', src: character3, text: 'Pytałam tylko o rozkład pociągów.',         avatar: { key: 'avatar3', src: avatar3 } }, // Weronika
+        { key: 'character4', src: character4, text: 'Przyszedłem po kolegę, serio.',             avatar: { key: 'avatar4', src: avatar4 } }, // Kacper
+        { key: 'character5', src: character5, text: 'Ktoś wszedł od zaplecza, widziałam.',       avatar: { key: 'avatar5', src: avatar5 } }, // Julia
       ],
 
-      // === PRZEDMIOTY (4) ===
+      // === PRZEDMIOTY (4) — ROZSZERZONE PODPOWIEDZI (poziom 4) ===
       items: [
         {
           key: 'teczka_ofiary',
           name: 'Teczka ofiary',
-          text: 'Uszkodzony zamek, brak części dokumentów; ślady szarpaniny przy klapce.',
+          text: [
+            'Uszkodzony zamek, naderwany pasek przy klapce; wewnątrz brak części dokumentów. Na narożniku świeża rysa (uderzenie o posadzkę lub bok wózka). Na okładce rozmazany odcisk dłoni – brak pełnego wzoru (szarpanina). Wskazówka: powiąż ze „Przewrócony wózek” (pośpiech/transport) i miejscem „Wejście do tunelu” (finał).'
+          ].join('\n'),
           src: require('../assets/items/teczka.png'),
           avatar: { key: 'teczka_ofiary', src: require('../assets/items/teczka.png') },
           scale: 0.05,
@@ -85,7 +87,9 @@ Ustal, kto z czterech podejrzanych miał realną możliwość przejęcia teczki 
         {
           key: 'kadr_k3',
           name: 'Kadr z monitoringu (K-3, 23:54)',
-          text: 'Sylwetka otwierająca drzwi serwisowe tuż przed zdarzeniem.',
+          text: [
+            'Sylwetka otwierająca drzwi serwisowe od zaplecza; głowa odwrócona, twarz niewidoczna. Wejście następuje na 60–90 s przed 23:55 z hali. Chwyt jednoręczny za klamkę, drugą ręką coś przy piersi (format jak teczka). Wskazówka: skoreluj z miejscem „Drzwi serwisowe / zaplecze” oraz trasą do „Peron główny”.'
+          ].join('\n'),
           src: require('../assets/items/kamera2.png'),
           avatar: { key: 'kadr_k3', src: require('../assets/items/kamera2.png') },
           scale: 0.05,
@@ -93,7 +97,9 @@ Ustal, kto z czterech podejrzanych miał realną możliwość przejęcia teczki 
         {
           key: 'wozek_bagazowy',
           name: 'Przewrócony wózek bagażowy',
-          text: 'Rysy i smugi prowadzą w stronę wejścia do tunelu.',
+          text: [
+            'Rysy i smugi na posadzce w osi kół ciągną się w stronę tunelu. Jeden uchwyt wygięty – ślad gwałtownego pociągnięcia. Przy kole drobne papierowe strzępki – podobne do skrawków z teczki. Wskazówka: prowadzi ruchem do „Wejście do tunelu”; łącz z „Teczka ofiary”.'
+          ].join('\n'),
           src: require('../assets/items/wozek.png'),
           avatar: { key: 'wozek_bagazowy', src: require('../assets/items/wozek.png') },
           scale: 0.05,
@@ -101,19 +107,25 @@ Ustal, kto z czterech podejrzanych miał realną możliwość przejęcia teczki 
         {
           key: 'walizka_porzucona',
           name: 'Porzucona walizka',
-          text: 'Nie należy do ofiary; w środku gazety. Wcześniej widziano przy niej Tomasza.',
+          text: [
+            'Nie należy do ofiary; w środku tylko gazety jako „wypełniacz”. Zamki sprawne, brak cennych rzeczy – wygląda na dywersję. Świadkowie kojarzą Tomasza przy tej walizce wcześniej. Wskazówka: fałszywy trop odciągający uwagę z peronu; nie łączy się z finałem przy tunelu.'
+          ].join('\n'),
           src: require('../assets/items/walizka.png'),
           avatar: { key: 'walizka_porzucona', src: require('../assets/items/walizka.png') },
           scale: 0.05,
         },
       ],
 
-      // === MIEJSCA (4) ===
+      // === MIEJSCA (4) — ROZSZERZONE PODPOWIEDZI (poziom 4) ===
       places: [
         {
           key: 'peron_glowny',
           name: 'Peron główny',
-          text: 'Ostatnie miejsce, gdzie widziano ofiarę z teczką.',
+          text: [
+            'Ostatnie miejsce, gdzie widziano ofiarę z teczką.',
+            'Rozrzucone drobne papierki przy ławce – możliwy początek szarpaniny.',
+            'Wskazówka: punkt pośredni między „Drzwi serwisowe” a „Wejście do tunelu”.'
+          ].join('\n'),
           src: require('../assets/places/peron.png'),
           avatar: { key: 'peron_glowny', src: require('../assets/places/peron.png') },
           scale: 0.05,
@@ -121,7 +133,11 @@ Ustal, kto z czterech podejrzanych miał realną możliwość przejęcia teczki 
         {
           key: 'wejscie_tunel',
           name: 'Wejście do tunelu',
-          text: 'Miejsce znalezienia ciała; punkt kulminacyjny szarpaniny.',
+          text: [
+            'Miejsce znalezienia ciała; na progu rysy zgodne z torem kół wózka.',
+            'Na poręczy smuga jak po szybkim oparciu/poślizgu.',
+            'Wskazówka: finał trasy „wózek → teczka”; to tu eskalowała szarpanina.'
+          ].join('\n'),
           src: require('../assets/places/tunel.png'),
           avatar: { key: 'wejscie_tunel', src: require('../assets/places/tunel.png') },
           scale: 0.05,
@@ -129,7 +145,12 @@ Ustal, kto z czterech podejrzanych miał realną możliwość przejęcia teczki 
         {
           key: 'drzwi_serwisowe',
           name: 'Drzwi serwisowe / zaplecze',
-          text: 'Tędy ktoś wszedł na peron poza ruchem pasażerów.',
+          text: [
+            'Skrót na peron poza ruchem pasażerów.',
+            'Czujnik otwarcia loguje impuls ~23:54 (zgodny z „Kadr K-3”).',
+            'Na framudze świeże, równoległe rysy – ślad po gwałtownym otwarciu.',
+            'Wskazówka: punkt wejścia sprawcy na trasę do peronu/tunelu.'
+          ].join('\n'),
           src: require('../assets/places/drzwi_serwisowe.png'),
           avatar: { key: 'drzwi_serwisowe', src: require('../assets/places/drzwi_serwisowe.png') },
           scale: 0.05,
@@ -137,7 +158,11 @@ Ustal, kto z czterech podejrzanych miał realną możliwość przejęcia teczki 
         {
           key: 'hala_odjazdow',
           name: 'Hala odjazdów (23:55)',
-          text: 'Zegar ramuje czas zdarzeń; koreluje z nagraniem K-3 (23:54).',
+          text: [
+            'Zegar wybija 23:55 – kotwica czasu zdarzeń.',
+            'Widoczność z hali nie obejmuje zaplecza; świadek widzi ruch „od zaplecza” na peron.',
+            'Wskazówka: skoreluj czas „23:55” z „K-3 23:54”, by domknąć sekwencję wejścia.'
+          ].join('\n'),
           src: require('../assets/places/hala_odjazdow.png'),
           avatar: { key: 'hala_odjazdow', src: require('../assets/places/hala_odjazdow.png') },
           scale: 0.05,
