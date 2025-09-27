@@ -71,12 +71,14 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto wykorzystał zami
         { key: 'character5', src: character5, text: 'Spokojnie, spróbujmy odtworzyć kolejność.', avatar: { key: 'avatar5', src: avatar5 } }, // Jakub
       ],
 
-      // === PRZEDMIOTY (4) ===
+      // === PRZEDMIOTY (4) – ROZSZERZONE PODPOWIEDZI (poziom 2) ===
       items: [
         {
           key: 'kieliszek_ofiary',
           name: 'Kieliszek ofiary',
-          text: 'Resztka napoju o gorzkim posmaku; przetarta krawędź – ślad manipulacji.',
+          text: [
+            'Resztka napoju o wyraźnie gorzkim posmaku. Na krawędzi ślad przetarcia (ściereczka/serwetka?) i słabszy odcisk ust niż na kieliszku sąsiada. Na obrusie obok drobna plamka – kieliszek był lekko przesuwany przed północą. Wskazówka: połącz z „Karafka wina” (dolewka) i „Bar” (bitters – maskowanie smaku).'
+          ].join('\n'),
           src: require('../assets/items/kieliszek.png'),
           avatar: { key: 'kieliszek_ofiary', src: require('../assets/items/kieliszek.png') },
           scale: 0.05,
@@ -84,7 +86,9 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto wykorzystał zami
         {
           key: 'karafka_wina',
           name: 'Karafka wina',
-          text: 'Odciski Michała; karafka pojawiła się na sali tuż przed północą.',
+          text: [
+            'Odciski Michała na szyjce. Postawiona na stole ok. 23:59 (obsługa potwierdza wymianę naczyń tuż przed północą). Poziom w karafce minimalnie niższy niż w identycznych na innych stołach. Wskazówka: skoreluj z „Korytarz do kuchni” (martwy punkt) i „Logi Michała” (brak telefonu).'
+          ].join('\n'),
           src: require('../assets/items/karafka.png'),
           avatar: { key: 'karafka_wina', src: require('../assets/items/karafka.png') },
           scale: 0.05,
@@ -92,7 +96,9 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto wykorzystał zami
         {
           key: 'butelka_bitters',
           name: 'Butelka bitters (bar)',
-          text: 'Nienaturalny ubytek; barman mówi, że „ktoś wziął na chwilę”.',
+          text: [
+            'Ubytek ~20–30 ml w krótkim oknie tuż przed północą. Barman był odwrócony plecami (podawanie zamówień); odciski na szyjce rozmazane. Bitters nie jest trucizną – ale świetnie maskuje smak i zapach dolewek. Wskazówka: łącz z „Karafka wina” (dolewka) i wyklucz Rafała (nie podchodził do baru).'
+          ].join('\n'),
           src: require('../assets/items/bitters.png'),
           avatar: { key: 'butelka_bitters', src: require('../assets/items/bitters.png') },
           scale: 0.05,
@@ -100,19 +106,26 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto wykorzystał zami
         {
           key: 'logi_michal',
           name: 'Wydruk logów połączeń Michała',
-          text: 'W czasie rzekomego „telefonu” brak połączeń przychodzących/wychodzących.',
+          text: [
+            '23:56–00:02: brak połączeń przychodzących/wychodzących.',
+            'Michał w tym czasie „wyszedł odebrać telefon”.',
+            'Wskazówka: obala alibi; zestaw z miejscem „Korytarz do kuchni” (zniknięcie poza kamerami).'
+          ].join('\n'),
           src: require('../assets/items/telefon_wydruk.png'),
           avatar: { key: 'logi_michal', src: require('../assets/items/telefon_wydruk.png') },
           scale: 0.05,
         },
       ],
 
-      // === MIEJSCA (4) ===
+      // === MIEJSCA (4) – ROZSZERZONE PODPOWIEDZI (poziom 2) ===
       places: [
         {
           key: 'stolik_ofiary',
           name: 'Stolik ofiary',
-          text: 'Miejsce zgonu; kieliszek przestawiany kilkukrotnie.',
+          text: [
+            'Miejsce zgonu. Dwa okrągłe ślady po dnie karafki (przestawiana), lekka plamka na obrusie obok kieliszka.',
+            'Wskazówka: połącz „Karafka wina” + „Kieliszek ofiary” dla sekwencji dolania tuż przed północą.'
+          ].join('\n'),
           src: require('../assets/places/stolik.png'),
           avatar: { key: 'stolik_ofiary', src: require('../assets/places/stolik.png') },
           scale: 0.05,
@@ -120,7 +133,10 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto wykorzystał zami
         {
           key: 'bar',
           name: 'Bar',
-          text: 'Tu stoją bitters i zapasowe karafki; barman bywa odwrócony plecami.',
+          text: [
+            'Stoją tu bitters i zapasowe karafki. Krótki „ślepy” moment, gdy barman obsługuje drugi koniec lady.',
+            'Wskazówka: tu dochodzi do ubytku w butelce bitters – skoreluj z czasem pojawienia się karafki.'
+          ].join('\n'),
           src: require('../assets/places/bar.png'),
           avatar: { key: 'bar', src: require('../assets/places/bar.png') },
           scale: 0.05,
@@ -128,7 +144,11 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto wykorzystał zami
         {
           key: 'korytarz_kuchnia',
           name: 'Korytarz do kuchni',
-          text: 'Martwy punkt kamer; tędy Michał znika na kilka minut.',
+          text: [
+            'Martwy punkt kamer, krótki odcinek między salą a zapleczem.',
+            'Kelner wspomina przemykającą sylwetkę ok. 23:58–23:59.',
+            'Wskazówka: połącz z „Logi Michała” (brak telefonu w tym oknie).'
+          ].join('\n'),
           src: require('../assets/places/korytarz_kuchnia.png'),
           avatar: { key: 'korytarz_kuchnia', src: require('../assets/places/korytarz_kuchnia.png') },
           scale: 0.05,
@@ -136,7 +156,11 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto wykorzystał zami
         {
           key: 'sala_glowna',
           name: 'Sala główna',
-          text: 'Porozstawiane krzesła; łatwo wmieszać się między stoliki (trop na Rafała).',
+          text: [
+            'Porozstawiane krzesła, lekki chaos po zamieszaniu.',
+            'Świadkowie widzieli Rafała krzątającego się między stolikami.',
+            'Wskazówka: fałszywy trop – brak powiązania z „Bar” i „Karafka wina”.'
+          ].join('\n'),
           src: require('../assets/places/sala_restauracyjna.png'),
           avatar: { key: 'sala_glowna', src: require('../assets/places/sala_restauracyjna.png') },
           scale: 0.05,
@@ -147,7 +171,7 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto wykorzystał zami
       itemPositions: [
         { x: 0.59 * window.innerWidth, y: 0.35 * window.innerHeight }, // kieliszek_ofiary
         { x: 0.48 * window.innerWidth, y: 0.44 * window.innerHeight }, // karafka_wina
-        { x: 0.36 * window.innerWidth, y: 0.72 * window.innerHeight }, // butelka_bitters
+        { x: 0.36 * window.innerWidth, y: 0.66 * window.innerHeight }, // butelka_bitters
         { x: 0.62 * window.innerWidth, y: 0.70 * window.innerHeight }, // logi_michal
       ],
 
@@ -174,3 +198,4 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto wykorzystał zami
     });
   }
 }
+
