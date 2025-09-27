@@ -34,21 +34,23 @@ export default class LevelOffice extends BaseInvestigationScene {
     super('LevelOffice', {
       bgKey: 'bg_office',
       bgSrc: scenaBiuro,
-      title: 'Noc w biurze',
-      intro: `🖼 Sceneria:
+title: 'Noc w biurze',
+intro: `🖼 Sceneria:
 To samo biuro Anny, właścicielki firmy jubilerskiej. Z pozoru spokojne miejsce pracy, dziś jest pełne napięcia. Policja otoczyła budynek, a wszyscy obecni stali się świadkami lub podejrzanymi.
 
 📖 Historia poziomu:
 Wczoraj wieczorem w biurze odbyło się nadzwyczajne spotkanie w sprawie fatalnej sytuacji finansowej firmy. Oprócz właścicielki Anny, na miejscu byli: Marzena z synem Kacprem, Piotr i Tomasz. Spotkanie przeciągnęło się do późnych godzin.
-
 Rano ochroniarz znalazł ciało Pawła – pracownika działu sprzedaży, który według zeznań w ogóle nie powinien być wtedy w biurze. Został znaleziony przy jednym z biurek w głównej sali, a wokół panował chaos: porozrzucane dokumenty, przewrócone krzesła, niedopita kawa.
+Policja szybko ustaliła, że Paweł miał dostęp do poufnych danych i niedawno kontaktował się z konkurencyjną firmą. To mogło sprawić, że ktoś chciał go uciszyć. Problem w tym, że każdy z obecnych ma powód, by ukryć, co naprawdę robił wczoraj wieczorem.
 
-Policja szybko ustaliła, że Paweł miał dostęp do poufnych danych i niedawno kontaktował się z konkurencyjną firmą. To mogło sprawić, że ktoś chciał go uciszyć. Problem w tym, że każdy z obecnych ma powód, by ukryć, co naprawdę robił wczoraj wieczorem:
+Podejrzani:
+• Marzena — obawiała się utraty pracy i desperacko szukała sposobu na spłatę długów.  
+• Kacper — twierdzi, że tylko czekał na matkę, ale pracownicy widzieli, jak kręcił się w pobliżu biurka Pawła.  
+• Tomasz — ma reputację złodziejaszka, a wczoraj przyznał się, że „miał interes” w tym biurze.  
+• Piotr — próbował namówić Annę na wspólną inwestycję. Może Paweł wiedział o czymś, co mogło mu zaszkodzić?
 
-• Marzena – obawiała się utraty pracy i desperacko szukała sposobu na spłatę długów.
-• Kacper – twierdzi, że tylko czekał na matkę, ale pracownicy widzieli, jak kręcił się w pobliżu biurka Pawła.
-• Tomasz – ma reputację złodziejaszka, a wczoraj przyznał się, że „miał interes” w tym biurze.
-• Piotr – próbował namówić Annę na wspólną inwestycję. Może Paweł wiedział o czymś, co mogło mu zaszkodzić?
+Świadek:
+• Anna — właścicielka firmy. Organizowała spotkanie i może potwierdzić, kto wychodził jako ostatni. Twierdzi, że po zakończeniu narady nikt nie powinien już wracać do open space.
 
 🎯 Cel gracza:
 Jako detektyw musisz przesłuchać świadków, przejrzeć biuro i zebrać dowody. Nikt nie mówi całej prawdy, a Twoim zadaniem jest zrozumieć, co wydarzyło się w nocy, zanim sprawca usunie resztki dowodów.`,

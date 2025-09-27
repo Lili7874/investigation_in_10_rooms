@@ -1,3 +1,4 @@
+// src/scenes/LevelCasino.js
 /* 
 Rozstrzygnięcie (ukryta prawda – poziom 9)
 
@@ -56,36 +57,42 @@ Ustal, kto z czterech podejrzanych wykorzystał zamieszanie w kasynie, by zabić
 
       // === POZYCJE POSTACI (ładny łuk; możesz modyfikować procenty ekranu) ===
       positions: [
-        { x: 0.50 * window.innerWidth, y: 0.70 * window.innerHeight }, // piotr
-        { x: 0.64 * window.innerWidth, y: 0.53 * window.innerHeight }, // rafał
-        { x: 0.40 * window.innerWidth, y: 0.54 * window.innerHeight }, // alicja
-        { x: 0.50 * window.innerWidth, y: 0.47 * window.innerHeight }, //julia
-        { x: 0.52 * window.innerWidth, y: 0.26 * window.innerHeight }, // szymon
+        { x: 0.50 * window.innerWidth, y: 0.70 * window.innerHeight }, // Piotr
+        { x: 0.64 * window.innerWidth, y: 0.53 * window.innerHeight }, // Rafał
+        { x: 0.40 * window.innerWidth, y: 0.54 * window.innerHeight }, // Alicja
+        { x: 0.50 * window.innerWidth, y: 0.47 * window.innerHeight }, // Julia
+        { x: 0.52 * window.innerWidth, y: 0.26 * window.innerHeight }, // Szymon
       ],
 
       // === POSTACIE ===
       characters: [
-        { key: 'character1', src: character1, text: 'Widziałem coś podejrzanego!',  avatar: { key: 'avatar1', src: avatar1 } },
-        { key: 'character2', src: character2, text: 'Nie wiem, czy mogę pomóc...', avatar: { key: 'avatar2', src: avatar2 } },
-        { key: 'character3', src: character3, text: 'To było straszne!',           avatar: { key: 'avatar3', src: avatar3 } },
-        { key: 'character4', src: character4, text: 'Ktoś tu był przed tobą...',    avatar: { key: 'avatar4', src: avatar4 } },
-        { key: 'character5', src: character5, text: 'Musisz się pośpieszyć!',       avatar: { key: 'avatar5', src: avatar5 } },
+        { key: 'character1', src: character1, text: 'Byłem przy ruletce, przysięgam.',  avatar: { key: 'avatar1', src: avatar1 } },
+        { key: 'character2', src: character2, text: 'As miał zagięty róg, to oszustwo!', avatar: { key: 'avatar2', src: avatar2 } },
+        { key: 'character3', src: character3, text: 'Wyszłam tylko na chwilę po żetony.', avatar: { key: 'avatar3', src: avatar3 } },
+        { key: 'character4', src: character4, text: 'Rozmawiałam z nim przy barze, tyle.', avatar: { key: 'avatar4', src: avatar4 } },
+        { key: 'character5', src: character5, text: 'Pamiętam kratę… i blackout kamer.',   avatar: { key: 'avatar5', src: avatar5 } },
       ],
 
-      // === PRZEDMIOTY (opis + grafika; rozmiar przez scale) ===
+      // === PRZEDMIOTY (4) — ROZSZERZONE PODPOWIEDZI (poziom 9) ===
       items: [
         {
           key: 'marynarka_krata',
           name: 'Marynarka w kratę',
-          text: 'Marynarka odłożona na oparcie w VIP. W kieszeni paragon z 01:17 (whisky); na klapie kurz jak z obicia fotela VIP. Metka z monogramem „P.”.',
+          text: [
+            'Znaleziona odłożona na oparciu w VIP; na klapie kurz z obicia fotela. W kieszeni paragon z 01:17 (whisky single malt); metka z monogramem „P.”. Na podszewce mikrowłókna zgodne z tymi z klamki drzwi VIP. Korelacja czasu: 01:17 (paragon) → 01:19 (zasłonięcie kamery) → 01:22 (hałas zgłaszany przez ochronę).'
+          ].join('\n'),
           src: require('../assets/items/marynarka.png'),
-          avatar: { key: 'marynarka', src: require('../assets/items/marynarka.png') },
+          avatar: { key: 'marynarka_krata', src: require('../assets/items/marynarka.png') },
           scale: 0.05,
         },
         {
           key: 'zetony',
           name: 'Żetony kasynowe',
-          text: 'Stos żetonów ofiary. Brakuje 5 wysokich nominałów. Log stołu: brak zakładów Piotra 01:16–01:23.',
+          text: [
+            'Stos żetonów ofiary: brakuje 5 wysokich nominałów; tray krupiera wykazuje niedobór w tym samym oknie.',
+            'Log stołu ruletki: 01:16–01:23 brak zakładów Piotra — alibi upada.',
+            'Wskazówka: ruch żetonów nie pokrywa się z „ciągłą grą” deklarowaną przez Piotra.'
+          ].join('\n'),
           src: require('../assets/items/zetony.png'),
           avatar: { key: 'zetony', src: require('../assets/items/zetony.png') },
           scale: 0.05,
@@ -93,7 +100,11 @@ Ustal, kto z czterech podejrzanych wykorzystał zamieszanie w kasynie, by zabić
         {
           key: 'karta_as',
           name: 'As pik',
-          text: 'Zagięty róg (oznaczona karta) z rozdania, o które spierał się Rafał. Brak świeżych odcisków (rękawiczki?).',
+          text: [
+            'Zagięty róg (oznaczona karta) z rozdania, o które spierał się Rafał.',
+            'Brak świeżych odcisków — możliwe rękawiczki, ale czas rozdania to 01:08–01:12.',
+            'Wskazówka: silny motyw Rafała, lecz nie spina się z oknem 01:17–01:22.'
+          ].join('\n'),
           src: require('../assets/items/karta_as.png'),
           avatar: { key: 'karta_as', src: require('../assets/items/karta_as.png') },
           scale: 0.05,
@@ -101,19 +112,27 @@ Ustal, kto z czterech podejrzanych wykorzystał zamieszanie w kasynie, by zabić
         {
           key: 'kieliszek_bar',
           name: 'Kieliszek z baru',
-          text: 'Odciski Julii i ofiary. Barman potwierdza rozmowę 01:10–01:14. Brak środków odurzających.',
+          text: [
+            'Odciski Julii i ofiary; barman potwierdza rozmowę 01:10–01:14.',
+            'Brak środków odurzających; paragon na dwa drinki o 01:13.',
+            'Wskazówka: kontakt z ofiarą wcześniejszy, ale nie pokrywa się z blackoutem kamer.'
+          ].join('\n'),
           src: require('../assets/items/kieliszek.png'),
-          avatar: { key: 'kieliszek', src: require('../assets/items/kieliszek.png') },
+          avatar: { key: 'kieliszek_bar', src: require('../assets/items/kieliszek.png') },
           scale: 0.05,
         },
       ],
 
-      // === MIEJSCA (jak itemy – interaktywne elementy) ===
+      // === MIEJSCA (4) — ROZSZERZONE PODPOWIEDZI (poziom 9) ===
       places: [
         {
           key: 'vip_room',
           name: 'Pokój VIP',
-          text: 'Miejsce zbrodni. Kamera zasłonięta 01:19. Na klamce mikrowłókna pasujące do marynarki w kratę.',
+          text: [
+            'Miejsce zbrodni; kamera zasłonięta o 01:19 (kurtka/krawędź tkaniny w kadrze).',
+            'Na klamce mikrowłókna odpowiadające splocie tkaniny marynarki w kratę.',
+            'Wskazówka: okno 01:17–01:22 jest kluczowe i zbieżne z paragonem z marynarki.'
+          ].join('\n'),
           src: require('../assets/places/vip_room.png'),
           avatar: { key: 'vip_room', src: require('../assets/places/vip_room.png') },
           scale: 0.05,
@@ -121,7 +140,11 @@ Ustal, kto z czterech podejrzanych wykorzystał zamieszanie w kasynie, by zabić
         {
           key: 'stol_poker',
           name: 'Stół do pokera',
-          text: 'Alicja grała tutaj. Przerwa w rozdaniu 01:15–01:18 (krupier). Wróciła z nowymi żetonami o 01:18.',
+          text: [
+            'Alicja grała tutaj; przerwa w rozdaniu 01:15–01:18 (potwierdza krupier).',
+            'Wróciła z nowymi żetonami o 01:18 — zbyt wcześnie, by wejść i wyjść z VIP przed blackoutem.',
+            'Wskazówka: obecność przy stole ogranicza jej możliwość bycia w VIP o 01:19.'
+          ].join('\n'),
           src: require('../assets/places/stol_poker.png'),
           avatar: { key: 'stol_poker', src: require('../assets/places/stol_poker.png') },
           scale: 0.05,
@@ -129,7 +152,11 @@ Ustal, kto z czterech podejrzanych wykorzystał zamieszanie w kasynie, by zabić
         {
           key: 'ruletka',
           name: 'Ruletka',
-          text: 'Piotr twierdzi, że był tu cały czas. Log stołu temu przeczy: 01:16–01:23 bez zakładów.',
+          text: [
+            'Piotr twierdzi, że był tu cały czas; dziennik krupiera przeczy: 01:16–01:23 bez zakładów.',
+            'Na poręczy korytarza koło ruletki ślad pudru/kurzu podobny jak na klapie marynarki.',
+            'Wskazówka: luka czasowa Piotra pokrywa się z ruchem do VIP.'
+          ].join('\n'),
           src: require('../assets/places/ruletka.png'),
           avatar: { key: 'ruletka', src: require('../assets/places/ruletka.png') },
           scale: 0.05,
@@ -137,7 +164,11 @@ Ustal, kto z czterech podejrzanych wykorzystał zamieszanie w kasynie, by zabić
         {
           key: 'bar',
           name: 'Bar',
-          text: 'Julia rozmawiała z ofiarą 01:10–01:14 (paragon na dwa drinki). Później była widziana w korytarzu.',
+          text: [
+            'Julia i ofiara rozmawiają 01:10–01:14; później Julia widziana w korytarzu.',
+            'Przy barze przewrócone krzesło (zamieszanie), ale kamery działają — brak wejścia do VIP o 01:19.',
+            'Wskazówka: mylący trop — brak zgodności z kluczowym oknem czasu.'
+          ].join('\n'),
           src: require('../assets/places/bar.png'),
           avatar: { key: 'bar', src: require('../assets/places/bar.png') },
           scale: 0.05,
@@ -159,7 +190,8 @@ Ustal, kto z czterech podejrzanych wykorzystał zamieszanie w kasynie, by zabić
         { x: 0.58 * window.innerWidth, y: 0.62 * window.innerHeight }, // ruletka
         { x: 0.38 * window.innerWidth, y: 0.73 * window.innerHeight }, // bar
       ],
-	  // listy dla tablicy dedukcji i podpowiedzi w inputach
+
+      // listy dla tablicy dedukcji i podpowiedzi w inputach
       deduction: {
         suspects: ['Piotr', 'Rafał', 'Alicja', 'Julia'],
         places:   ['VIP', 'Stół', 'Ruletka', 'Bar'],
@@ -169,7 +201,6 @@ Ustal, kto z czterech podejrzanych wykorzystał zamieszanie w kasynie, by zabić
       // callback po kliknięciu „Zakończ poziom”
       onDeductionSubmit: ({ suspect, item, place }) => {
         console.log('Gracz wskazał:', suspect, item, place);
-        // tu możesz porównać z prawdą i np. wyświetlić modal / zakończyć scenę
         // Prawda (poziom 9): Piotr + Marynarka w kratę + Pokój VIP
       },
     });
