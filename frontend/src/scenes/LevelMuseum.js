@@ -207,6 +207,16 @@ Twoim zadaniem jest ustalenie, kto znał zabezpieczenia i miał okazję, by ukra
         console.log('Gracz wskazał:', suspect, item, place);
         // Prawda (poziom 6): Anna + Dziennik alarmów (wejście techniczne) + Drzwi awaryjne
       },
+      solution: {
+        suspectKey: 'character1',  
+        itemKey:    'dziennik_alarmow',
+        placeKey:   'drzwi_awaryjne',
+        aliases: {
+          suspect: ['Anna'],
+          item:    ['Dziennik alarmów', 'Dziennik'],
+          place:   ['Drzwi awaryjne', 'Drzwi']
+        }
+      },
     });
   }
 }

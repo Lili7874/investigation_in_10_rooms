@@ -197,6 +197,16 @@ Ustal, kto z czterech podejrzanych miał realną możliwość przejęcia teczki 
         console.log('Gracz wskazał:', suspect, item, place);
         // Prawda (poziom 4): Tomasz + Kadr z monitoringu (K-3, 23:54) + Wejście do tunelu
       },
+      solution: {
+        suspectKey: 'character2',  
+        itemKey:    'kadr_k3',
+        placeKey:   'wejscie_tunel',
+        aliases: {
+          suspect: ['Tomasz'],
+          item:    ['Kadr z monitoringu', 'Kadr'],
+          place:   ['Wejście do tunelu', 'Wejście']
+        }
+      },
     });
   }
 }

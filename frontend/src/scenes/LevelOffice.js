@@ -204,6 +204,16 @@ Jako detektyw musisz przesłuchać świadków, przejrzeć biuro i zebrać dowody
         console.log('Gracz wskazał:', suspect, item, place);
         // Prawda (poziom 1): Tomasz + Kadr z monitoringu (K-2, 00:07) + Biurko Pawła
       },
+      solution: {
+        suspectKey: 'character3',  
+        itemKey:    'kadr_k2',
+        placeKey:   'biurko_pawla',
+        aliases: {
+          suspect: ['Tomasz'],
+          item:    ['Kadr z monitoringu', 'Kadr'],
+          place:   ['Biurko Pawła', 'Biurko']
+        }
+      },
     });
   }
 }

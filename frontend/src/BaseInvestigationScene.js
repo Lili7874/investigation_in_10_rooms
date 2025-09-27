@@ -3,22 +3,6 @@ import Phaser from 'phaser';
 import './GameScene.css';
 
 export default class BaseInvestigationScene extends Phaser.Scene {
-  /**
-   * @param {string} key  - nazwa sceny
-   * @param {object} cfg  - konfiguracja sceny:
-   *  {
-   *    bgKey: string, bgSrc: string(import),
-   *    title: string, intro: string,
-   *    characters: Array<{ key:string, name?:string, text:string, avatar:{key:string, src?:string}|string, src?:string, x?:number, y?:number, scale?:number }>,
-   *    items?: Array<{ key:string, name?:string, text?:string, avatar?:{key:string, src?:string}|string, src?:string, x?:number, y?:number, scale?:number }>,
-   *    places?: Array<{ key:string, name?:string, text?:string, avatar?:{key:string, src?:string}|string, src?:string, x?:number, y?:number, scale?:number }>,
-   *    positions?: Array<{x:number,y:number}>,
-   *    itemPositions?: Array<{x:number,y:number}>,
-   *    placePositions?: Array<{x:number,y:number}>,
-   *    deduction?: { suspects?:string[], items?:string[], places?:string[] },
-   *    onDeductionSubmit?: ({suspect,item,place}) => void
-   *  }
-   */
   constructor(key, cfg) {
     super({ key });
     this._cfg = cfg;
@@ -41,18 +25,33 @@ export default class BaseInvestigationScene extends Phaser.Scene {
 
     this.shownDialogs = new Set();
     this.isPlaying = false;
+
+    this._introUi = [];
+    this._onResize = null;
+    this._onResizeMute = null;
+    this._onSidebarToggle = null;
+    this._dbKeyHandler = null;
+
+    this._dedInputs = null;
+  }
+
+  // ——— twarde wyłączenie innych scen ———
+  _enforceSingleActiveScene() {
+    const mgr = this.scene.manager;
+    const active = mgr.getScenes(true);
+    active.forEach(sc => {
+      if (sc !== this && sc.sys?.settings?.key !== this.scene.key) {
+        try { mgr.stop(sc.sys.settings.key); } catch (_) {}
+      }
+    });
   }
 
   // ------------- ŁADOWANIE -------------
   preload() {
-    // Tło
     this.load.image(this._cfg.bgKey, this._cfg.bgSrc);
-
-    // Dźwięki
     if (!this.cache.audio.exists('click')) this.load.audio('click', 'assets/click.mp3');
     if (!this.cache.audio.exists('bgm')) this.load.audio('bgm', 'assets/ambient.mp3');
 
-    // Postacie
     (this._cfg.characters || []).forEach(c => {
       if (c.src && !this.textures.exists(c.key)) this.load.image(c.key, c.src);
       const av = c.avatar;
@@ -61,7 +60,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       }
     });
 
-    // Przedmioty
     (this._cfg.items || []).forEach(it => {
       if (it.src && !this.textures.exists(it.key)) this.load.image(it.key, it.src);
       const av = it.avatar;
@@ -70,7 +68,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       }
     });
 
-    // Miejsca
     (this._cfg.places || []).forEach(pl => {
       if (pl.src && !this.textures.exists(pl.key)) this.load.image(pl.key, pl.src);
       const av = pl.avatar;
@@ -82,53 +79,46 @@ export default class BaseInvestigationScene extends Phaser.Scene {
 
   // ------------- START SCENY -------------
   create() {
-    // Poinformuj App/Sidebar
+    this._enforceSingleActiveScene();
+    this._purgeOrphanedUi();
+    this._wireShutdownHooks();
+
     window.dispatchEvent(new CustomEvent('sceneChange', { detail: this.scene.key }));
 
     const { width, height } = this.sys.game.canvas;
 
-    // Tło
     const bg = this.add.image(width / 2, height / 2, this._cfg.bgKey);
     const scale = Math.min(width / bg.width, height / bg.height) * 1.1;
     bg.setScale(scale).setOrigin(0.5, 0.5);
 
-    // Klik
     const click = this.sound.add('click');
     this.input.on('pointerdown', () => click && click.play());
 
-    // Postacie / Przedmioty / Miejsca + pozycje
     this.characters = this._cfg.characters || [];
     this.items = this._cfg.items || [];
     this.places = this._cfg.places || [];
 
     this.characterPositions = Array.isArray(this._cfg.positions)
-      ? this._cfg.positions
-      : this._autoPositions(this.characters.length);
-
+      ? this._cfg.positions : this._autoPositions(this.characters.length);
     this.itemPositions = Array.isArray(this._cfg.itemPositions)
-      ? this._cfg.itemPositions
-      : this._autoPositionsSecondary(this.items.length);
-
+      ? this._cfg.itemPositions : this._autoPositionsSecondary(this.items.length);
     this.placePositions = Array.isArray(this._cfg.placePositions)
-      ? this._cfg.placePositions
-      : this._autoPositionsSecondary(this.places.length);
+      ? this._cfg.placePositions : this._autoPositionsSecondary(this.places.length);
 
-    // Listy dla tablicy dedukcji (z cfg lub automatycznie)
     this._dedLists = this._buildDeductionLists();
 
-    // UI
     this.createDialogPanel();
     this.createDialogLog();
     this.createDeductionBoard(this._dedLists);
     this.createIntroOverlay(this._cfg.title || 'Scena', this._cfg.intro || '');
 
-    // Timer HUD
     this.buildTimerHud();
     this.tweens.add({ targets: this.timerBg, alpha: { from: 0.9, to: 0.6 }, duration: 1600, yoyo: true, repeat: -1 });
-    this.scale.on('resize', () => this.layoutTimer());
+
+    this._onResize = () => this.layoutTimer();
+    this.scale.on('resize', this._onResize);
     this.layoutTimer();
 
-    // Ukrywanie tablicy, gdy Sidebar otwarty
     this._onSidebarToggle = (e) => {
       const board = document.getElementById('deduction-board');
       if (!board) return;
@@ -137,20 +127,16 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     };
     window.addEventListener('sidebarToggle', this._onSidebarToggle);
 
-    // --------- MUZYKA + MUTE ----------
-    // Odblokuj AudioContext po 1. interakcji
     this.input.once('pointerdown', () => {
       if (this.sound?.context?.state === 'suspended') this.sound.context.resume();
     });
 
-    // Singleton BGM (nie restartujemy między scenami)
     if (!this.game.__bgm) {
       this.game.__bgm = this.sound.add('bgm', { loop: true, volume: 0.5 });
       this.game.__bgm.play();
     }
     this.bgm = this.game.__bgm;
 
-    // Ikona mute
     const btnSize = 40, pad = 20;
     this._musicMuted = !!this.bgm.isPaused;
     this.muteBtn = this.add.text(
@@ -158,30 +144,21 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       this.scale.height - btnSize - pad,
       this._musicMuted ? '🔇' : '🔊',
       { fontFamily: 'Monaco, monospace', fontSize: '28px', color: '#FFFFFF' }
-    )
-      .setInteractive({ cursor: 'pointer' })
-      .setScrollFactor(0)
-      .setDepth(2000);
+    ).setInteractive({ cursor: 'pointer' }).setScrollFactor(0).setDepth(2000);
 
-    // Klik mute – pause/resume
     this.muteBtn.on('pointerdown', (pointer) => {
       if (pointer?.event?.stopImmediatePropagation) pointer.event.stopImmediatePropagation();
       if (pointer?.event?.stopPropagation) pointer.event.stopPropagation();
-
       if (!this.bgm) return;
       this._musicMuted = !this._musicMuted;
-      if (this._musicMuted) {
-        this.bgm.pause();
-        this.muteBtn.setText('🔇');
-      } else {
-        this.bgm.resume();
-        this.muteBtn.setText('🔊');
-      }
+      if (this._musicMuted) { this.bgm.pause(); this.muteBtn.setText('🔇'); }
+      else { this.bgm.resume(); this.muteBtn.setText('🔊'); }
     });
 
-    this.scale.on('resize', (gameSize) => {
+    this._onResizeMute = (gameSize) => {
       this.muteBtn?.setPosition(gameSize.width - btnSize - pad, gameSize.height - btnSize - pad);
-    });
+    };
+    this.scale.on('resize', this._onResizeMute);
   }
 
   // ------------- TIMER -------------
@@ -280,10 +257,13 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     btn.setInteractive(new Phaser.Geom.Rectangle(-btnW / 2, -btnH / 2, btnW, btnH), Phaser.Geom.Rectangle.Contains);
     btn.on('pointerover', () => btnGfx.setAlpha(0.9));
     btn.on('pointerout', () => btnGfx.setAlpha(1));
+
+    this._introUi.push(shade, panelGfx, title, body, btn, btnGfx, btnTxt);
+
     btn.on('pointerdown', () => {
       if (board) board.style.display = '';
       if (notes) notes.style.display = '';
-      shade.destroy(); panelGfx.destroy(); title.destroy(); body.destroy(); btn.destroy();
+      this._clearIntroUi();
       document.body.classList.remove('intro-active');
 
       this.isPlaying = true;
@@ -472,7 +452,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     this._dbState = { page: 0 };
     const wrap = document.createElement('div'); wrap.id = 'deduction-board';
 
-    // Header
     const header = document.createElement('div'); header.id = 'deduction-header';
     const title = document.createElement('div'); title.textContent = 'Tablica dedukcji';
     const nav = document.createElement('div'); nav.className = 'db-nav';
@@ -482,7 +461,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     nav.appendChild(prevBtn); nav.appendChild(pageLabel); nav.appendChild(nextBtn);
     header.appendChild(title); header.appendChild(nav); wrap.appendChild(header);
 
-    // Strony
     const pages = document.createElement('div'); pages.className = 'db-pages'; wrap.appendChild(pages);
 
     const buildMatrix = (mTitle, rows, cols) => {
@@ -511,24 +489,20 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       return section;
     };
 
-    // Strona 1: Podejrzani × Miejsca
     const page0 = document.createElement('div'); page0.className = 'db-page active';
     const cont0 = document.createElement('div'); cont0.className = 'db2';
     cont0.appendChild(buildMatrix('Podejrzani × Miejsca', suspects, places));
     page0.appendChild(cont0);
 
-    // Strona 2: Przedmioty × Miejsca
     const page1 = document.createElement('div'); page1.className = 'db-page';
     const cont1 = document.createElement('div'); cont1.className = 'db2';
     cont1.appendChild(buildMatrix('Przedmioty × Miejsca', items, places));
     page1.appendChild(cont1);
 
-    // Strona 3: Odpowiedzi z datalist
     const page2 = document.createElement('div'); page2.className = 'db-page';
     const cont2 = document.createElement('div'); cont2.className = 'db2';
     const answerPanel = document.createElement('div'); answerPanel.id = 'deduction-answer';
 
-    // datalists
     const dlSus = document.createElement('datalist'); dlSus.id = 'dl-suspects';
     suspects.forEach(s => { const o = document.createElement('option'); o.value = s; dlSus.appendChild(o); });
     const dlItm = document.createElement('datalist'); dlItm.id = 'dl-items';
@@ -547,6 +521,8 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     const iRow = mk('Czym?',  'Wpisz przedmiot...',    'dl-items');
     const pRow = mk('Gdzie?', 'Wpisz miejsce...',      'dl-places');
 
+    this._dedInputs = { s: sRow.input, i: iRow.input, p: pRow.input };
+
     const finishBtn = document.createElement('button');
     finishBtn.id = 'deduction-finish-btn';
     finishBtn.textContent = 'Zakończ poziom';
@@ -556,9 +532,13 @@ export default class BaseInvestigationScene extends Phaser.Scene {
         item:    iRow.input.value.trim(),
         place:   pRow.input.value.trim(),
       };
+      const check = this._checkDeduction(ans);
+      if (check.hasSolution) {
+        this._showDeductionResult(check, ans);
+      }
       if (typeof this._cfg.onDeductionSubmit === 'function') {
-        try { this._cfg.onDeductionSubmit(ans); } catch (e) { console.warn(e); }
-      } else {
+        try { this._cfg.onDeductionSubmit({ ...ans, result: check }); } catch (e) { console.warn(e); }
+      } else if (!check.hasSolution) {
         console.log('Odpowiedź gracza:', ans);
       }
     };
@@ -597,6 +577,199 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     cell.textContent = states[s];
   }
 
+  // ====== UNIWERALNY CHECKER ======
+  _normalize(str) {
+    if (!str) return '';
+    const s = String(str).trim().toLowerCase();
+    return this._stripDiacritics(s).replace(/\s+/g, ' ');
+  }
+  _stripDiacritics(s) {
+    const map = { ą:'a', ć:'c', ę:'e', ł:'l', ń:'n', ó:'o', ś:'s', ż:'z', ź:'z' };
+    return s.replace(/[ąćęłńóśżź]/g, ch => map[ch] || ch)
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+  _findByKey(list, key) {
+    if (!Array.isArray(list) || !key) return null;
+    return list.find(x => x && x.key === key) || null;
+  }
+  _solutionSet(kind) {
+    const sol = this._cfg.solution || {};
+    const out = new Set();
+    const push = (txt) => { if (txt) out.add(this._normalize(txt)); };
+
+    const kindKey   = sol[`${kind}Key`];
+    const kindName  = sol[`${kind}Name`];
+    const kindAny   = sol[kind];
+    const aliases   = (sol.aliases && sol.aliases[kind]) || [];
+
+    let obj = null;
+    if (kind === 'suspect') obj = this._findByKey(this._cfg.characters, kindKey);
+    if (kind === 'item')    obj = this._findByKey(this._cfg.items,     kindKey);
+    if (kind === 'place')   obj = this._findByKey(this._cfg.places,    kindKey);
+
+    if (obj) {
+      push(obj.name || obj.label || obj.key);
+      push(obj.key);
+      const nm = this._normalize(obj.name || obj.label || '');
+      const short = nm.split(/\s+/)[0];
+      if (short && short.length >= 4) out.add(short);
+    }
+    push(kindName);
+    push(kindAny);
+    aliases.forEach(a => push(a));
+
+    return out;
+  }
+  _matches(choice, set) {
+    const c = this._normalize(choice);
+    if (!c) return false;
+    if (set.has(c)) return true;
+
+    if (c.length >= 4) {
+      for (const t of set) {
+        if (t.includes(c) || c.includes(t)) return true;
+      }
+    }
+    return false;
+  }
+  _checkDeduction(ans) {
+    if (!this._cfg.solution) {
+      return { hasSolution: false, okAll: false, details: { suspect:false, item:false, place:false } };
+    }
+    const sSet = this._solutionSet('suspect');
+    const iSet = this._solutionSet('item');
+    const pSet = this._solutionSet('place');
+
+    const res = {
+      hasSolution: true,
+      details: {
+        suspect: this._matches(ans.suspect, sSet),
+        item:    this._matches(ans.item,    iSet),
+        place:   this._matches(ans.place,   pSet),
+      }
+    };
+    res.okAll = res.details.suspect && res.details.item && res.details.place;
+    return res;
+  }
+
+  // ====== PRZYCISK „NASTĘPNY POZIOM” W MODALU ======
+  _resolveLevelOrder() {
+    const reg = this.game?.registry?.get('levelOrder');
+    if (Array.isArray(reg) && reg.length) return reg.slice();
+    const cfg = this.game?.config;
+    if (cfg && Array.isArray(cfg.levelOrder) && cfg.levelOrder.length) return cfg.levelOrder.slice();
+    if (Array.isArray(window.__LEVEL_ORDER__) && window.__LEVEL_ORDER__.length) return window.__LEVEL_ORDER__.slice();
+
+    // fallback: wszystkie zarejestrowane sceny zaczynające się od "Level"
+    const mgr = this.scene.manager;
+    const keys = Object.keys(mgr.keys || {});
+    return keys.filter(k => /^Level/i.test(k));
+  }
+  _getNextLevelKey() {
+    const order = this._resolveLevelOrder();
+    const idx = order.indexOf(this.scene.key);
+    if (idx === -1) return null;
+    return order[idx + 1] || null; // brak wrapowania – ostatni nie pokazuje przycisku
+  }
+  _switchToScene(key) {
+    if (!key) return;
+    const mgr = this.scene.manager;
+    try { mgr.stop(this.scene.key); } catch (_) {}
+    try { mgr.start(key); } catch (e) { console.warn('Nie mogę uruchomić sceny:', key, e); }
+  }
+
+  _showDeductionResult(result, ans) {
+    const old = document.getElementById('deduction-result');
+    if (old) old.remove();
+
+    const wrap = document.createElement('div');
+    wrap.id = 'deduction-result';
+    Object.assign(wrap.style, {
+      position:'fixed', inset:'0', background:'rgba(0,0,0,.55)', zIndex: 99999,
+      display:'flex', alignItems:'center', justifyContent:'center'
+    });
+
+    const panel = document.createElement('div');
+    Object.assign(panel.style, {
+      width:'min(560px, 92vw)', background:'#140024', color:'#fff',
+      border:'1px solid #8e4dff', borderRadius:'14px', padding:'18px 20px',
+      fontFamily:'Monaco, monospace', boxShadow:'0 10px 30px rgba(0,0,0,.35)'
+    });
+
+    const h = document.createElement('div');
+    h.textContent = result.okAll ? '✅ Dobrze dedukujesz!' : '❌ Coś się nie zgadza';
+    Object.assign(h.style, { fontSize:'18px', marginBottom:'10px' });
+
+    const mkRow = (label, ok, val) => {
+      const r = document.createElement('div');
+      r.innerHTML = `${ok ? '✅' : '❌'} <b>${label}:</b> ${val || '—'}`;
+      r.style.margin = '4px 0';
+      return r;
+    };
+
+    const rows = document.createElement('div');
+    rows.appendChild(mkRow('Podejrzany', result.details.suspect, ans.suspect));
+    rows.appendChild(mkRow('Przedmiot',  result.details.item,    ans.item));
+    rows.appendChild(mkRow('Miejsce',    result.details.place,   ans.place));
+
+    const btns = document.createElement('div');
+    btns.style.marginTop = '16px';
+    btns.style.display = 'flex';
+    btns.style.gap = '10px';
+
+    const close = document.createElement('button');
+    close.textContent = result.okAll ? 'OK' : 'Spróbuj ponownie';
+    Object.assign(close.style, {
+      padding:'10px 16px', borderRadius:'10px', border:'1px solid #b983ff',
+      background:'#3e0f6f', color:'#fff', cursor:'pointer'
+    });
+    close.onclick = () => {
+      wrap.remove();
+      if (result.okAll) this.events.emit('level:solved', { scene: this.scene.key });
+    };
+    btns.appendChild(close);
+
+    // Nowość: „Następny poziom” (tylko gdy jest poprawnie i znamy kolejkę)
+    if (result.okAll) {
+      const nextKey = this._getNextLevelKey();
+      if (nextKey) {
+        const nextBtn = document.createElement('button');
+        nextBtn.textContent = 'Następny poziom ▶';
+        Object.assign(nextBtn.style, {
+          padding:'10px 16px', borderRadius:'10px', border:'1px solid #7cff8e',
+          background:'#0f6f3e', color:'#fff', cursor:'pointer'
+        });
+        nextBtn.onclick = () => {
+          wrap.remove();
+          this._switchToScene(nextKey);
+        };
+        btns.appendChild(nextBtn);
+      } else {
+        // opcjonalnie: jeśli nie ma nextKey, pokaż powrót do selektora jeśli istnieje
+        const mgr = this.scene.manager;
+        if (mgr.keys && mgr.keys['LevelSelect']) {
+          const backBtn = document.createElement('button');
+          backBtn.textContent = 'Wróć do wyboru';
+          Object.assign(backBtn.style, {
+            padding:'10px 16px', borderRadius:'10px', border:'1px solid #b983ff',
+            background:'#242424', color:'#fff', cursor:'pointer'
+          });
+          backBtn.onclick = () => {
+            wrap.remove();
+            this._switchToScene('LevelSelect');
+          };
+          btns.appendChild(backBtn);
+        }
+      }
+    }
+
+    panel.appendChild(h);
+    panel.appendChild(rows);
+    panel.appendChild(btns);
+    wrap.appendChild(panel);
+    document.body.appendChild(wrap);
+  }
+
   // ------------- AUTO-POZYCJE -------------
   _autoPositions(count) {
     const { width, height } = this.scale;
@@ -617,12 +790,12 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       });
     }
     return positions;
-    }
+  }
 
   _autoPositionsSecondary(count) {
     const { width, height } = this.scale;
     const cx = width * 0.5;
-    const cy = height * 0.70; // niżej niż postacie
+    const cy = height * 0.70;
     const rx = Math.min(width, 1200) * 0.22;
     const ry = Math.min(height, 900) * 0.10;
 
@@ -641,6 +814,26 @@ export default class BaseInvestigationScene extends Phaser.Scene {
   }
 
   // ------------- SPRZĄTANIE -------------
+  _purgeOrphanedUi() {
+    ['deduction-board', 'dialog-log', 'deduction-result'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
+    document.body.classList.remove('intro-active');
+  }
+
+  _clearIntroUi() {
+    if (this._introUi && this._introUi.length) {
+      this._introUi.forEach(go => { try { go?.destroy?.(); } catch (_) {} });
+      this._introUi.length = 0;
+    }
+  }
+
+  _wireShutdownHooks() {
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
+    this.events.once(Phaser.Scenes.Events.DESTROY,  this.shutdown, this);
+  }
+
   shutdown() {
     if (this._onSidebarToggle) {
       window.removeEventListener('sidebarToggle', this._onSidebarToggle);
@@ -650,20 +843,44 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       document.removeEventListener('keydown', this._dbKeyHandler);
       this._dbKeyHandler = null;
     }
+    if (this._onResize) {
+      this.scale.off('resize', this._onResize);
+      this._onResize = null;
+    }
+    if (this._onResizeMute) {
+      this.scale.off('resize', this._onResizeMute);
+      this._onResizeMute = null;
+    }
+
+    this._clearIntroUi();
+    document.body.classList.remove('intro-active');
 
     if (this.input) this.input.removeAllListeners();
     if (this.tweens) this.tweens.killAll();
+    if (this.time)   this.time.removeAllEvents();
 
     if (this.timerHud) { this.timerHud.destroy(true); this.timerHud = null; }
     this.timerBg = null; this.timerIcon = null; this.timerText = null;
 
-    ['deduction-board', 'dialog-log'].forEach(id => {
+    ['deduction-board', 'dialog-log', 'deduction-result'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.remove();
     });
 
+    if (this.sound && Array.isArray(this.sound.sounds)) {
+      this.sound.sounds.forEach(s => {
+        if (s && s !== this.game.__bgm) {
+          try { s.stop(); s.destroy(); } catch (_) {}
+        }
+      });
+    }
+
     if (this.muteBtn) { this.muteBtn.destroy(); this.muteBtn = null; }
-    this.bgm = null; // nie zatrzymujemy globalnego __bgm
+    this.bgm = null;
+
+    this.isPlaying = false;
+    if (this.shownDialogs) this.shownDialogs.clear();
+    this._dedInputs = null;
   }
 
   destroy() { this.shutdown(); }

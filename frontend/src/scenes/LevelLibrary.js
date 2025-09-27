@@ -207,6 +207,16 @@ Ustal, kto miał realną możliwość wejścia do magazynu i dostęp do sejfu, o
         console.log('Gracz wskazał:', suspect, item, place);
         // Prawda (poziom 7): Julia + Karta rewersowa manuskryptu + Czytelnia
       },
+      solution: {
+        suspectKey: 'character2',  
+        itemKey:    'karta_rewersowa',
+        placeKey:   'czytelnia',
+        aliases: {
+          suspect: ['Julia'],
+          item:    ['Karta rewersowa', 'Karta'],
+          place:   ['Czytelnia']
+        }
+      },
     });
   }
 }

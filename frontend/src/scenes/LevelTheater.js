@@ -194,6 +194,16 @@ Przesłuchaj podejrzanych i świadka, ustal motyw oraz okazję do sabotażu, a n
         console.log('Gracz wskazał:', suspect, item, place);
         // Prawda (poziom 5): Michał + Nożyce do lin + Kulisy (mechanizm linowy)
       },
+      solution: {
+        suspectKey: 'character2',  
+        itemKey:    'nozyce_do_lin',
+        placeKey:   'kulisy_mechanizm',
+        aliases: {
+          suspect: ['Michał'],
+          item:    ['Nożyce do lin', 'Nożyce'],
+          place:   ['Kulisy']
+        }
+      },
     });
   }
 }

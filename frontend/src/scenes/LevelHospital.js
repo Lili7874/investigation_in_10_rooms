@@ -207,6 +207,16 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto z czwórki podejr
         console.log('Gracz wskazał:', suspect, item, place);
         // Prawda (poziom 8): Anna + Paczka papierosów z korytarza + Sala pacjenta
       },
+      solution: {
+        suspectKey: 'character1',  
+        itemKey:    'paczka_papierosow',
+        placeKey:   'sala_pacjenta',
+        aliases: {
+          suspect: ['Anna'],
+          item:    ['Paczka papierosów', 'Papierosy'],
+          place:   ['Sala pacjenta', 'Sala']
+        }
+      },
     });
   }
 }

@@ -203,6 +203,16 @@ Ustal, kto z czterech podejrzanych wykorzystał zamieszanie w kasynie, by zabić
         console.log('Gracz wskazał:', suspect, item, place);
         // Prawda (poziom 9): Piotr + Marynarka w kratę + Pokój VIP
       },
+      solution: {
+        suspectKey: 'character1',  
+        itemKey:    'marynarka_krata',
+        placeKey:   'vip_room',
+        aliases: {
+          suspect: ['Piotr'],
+          item:    ['Marynarka w kratę', 'Marynarka'],
+          place:   ['Pokój VIP', 'VIP']
+        }
+      },
     });
   }
 }

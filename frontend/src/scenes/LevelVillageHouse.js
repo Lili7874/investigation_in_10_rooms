@@ -201,6 +201,16 @@ Twoim zadaniem jest odkrycie, który z czterech podejrzanych miał motyw i okazj
         console.log('Gracz wskazał:', suspect, item, place);
         // Prawda (poziom 3): Szymon + Sznur do wiązania drewna + Salon
       },
+      solution: {
+        suspectKey: 'character4',  
+        itemKey:    'sznur_drewno',
+        placeKey:   'salon',
+        aliases: {
+          suspect: ['Szymon'],
+          item:    ['Sznur do wiązania drewna', 'Sznur'],
+          place:   ['Salon']
+        }
+      },
     });
   }
 }

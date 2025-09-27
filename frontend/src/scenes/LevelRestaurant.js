@@ -195,6 +195,16 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto wykorzystał zami
         console.log('Gracz wskazał:', suspect, item, place);
         // Prawda (poziom 2): Michał + Karafka wina + Stolik ofiary
       },
+      solution: {
+        suspectKey: 'character2',  
+        itemKey:    'karafka_wina',
+        placeKey:   'stolik_ofiary',
+        aliases: {
+          suspect: ['Michał'],
+          item:    ['Karafka wina', 'Karafka'],
+          place:   ['Stolik ofiary', 'Stolik']
+        }
+      },
     });
   }
 }
