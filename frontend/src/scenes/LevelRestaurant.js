@@ -190,6 +190,12 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto wykorzystał zami
         items:    ['Kieliszek', 'Karafka', 'Bitters', 'Logi'],
       },
 
+      notes: {
+        characters: ['Alicja', 'Michał', 'Weronika', 'Rafał', 'Jakub'],
+        places:   ['Stolik', 'Bar', 'Korytarz', 'Sala'],
+        items:    ['Kieliszek', 'Karafka', 'Bitters', 'Logi'],
+      },
+
       // callback po kliknięciu „Zakończ poziom”
       onDeductionSubmit: ({ suspect, item, place }) => {
         console.log('Gracz wskazał:', suspect, item, place);

@@ -199,6 +199,12 @@ Jako detektyw musisz przesłuchać świadków, przejrzeć biuro i zebrać dowody
         items:    ['Kadr K-2', 'Śrubokręt', 'Teczka', 'Kubek'],
       },
 
+      notes: {
+        characters: ['Marzena', 'Kacper', 'Tomasz', 'Piotr', 'Anna'],
+        places:   ['Biurko', 'Serwisowe', 'Konferencja', 'Recepcja'],
+        items:    ['Kadr K-2', 'Śrubokręt', 'Teczka', 'Kubek'],
+      },
+
       // callback po kliknięciu „Zakończ poziom”
       onDeductionSubmit: ({ suspect, item, place }) => {
         console.log('Gracz wskazał:', suspect, item, place);

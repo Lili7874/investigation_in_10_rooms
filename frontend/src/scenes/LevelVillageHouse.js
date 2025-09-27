@@ -196,6 +196,12 @@ Twoim zadaniem jest odkrycie, który z czterech podejrzanych miał motyw i okazj
         items:    ['Sznur', 'Księgi', 'Rękawiczki', 'Ślady błota'],
       },
 
+      notes: {
+        characters: ['Julia', 'Rafał', 'Piotr', 'Szymon', 'Michał'],
+        places:   ['Salon', 'Kominek', 'Okno', 'Przedsionek'],
+        items:    ['Sznur', 'Księgi', 'Rękawiczki', 'Ślady błota'],
+      },
+
       // callback po kliknięciu „Zakończ poziom”
       onDeductionSubmit: ({ suspect, item, place }) => {
         console.log('Gracz wskazał:', suspect, item, place);

@@ -198,6 +198,12 @@ Ustal, kto z czterech podejrzanych wykorzystał zamieszanie w kasynie, by zabić
         items:    ['Marynarka', 'Żetony', 'Karta', 'Kieliszek'],
       },
 
+      notes: {
+        characters: ['Piotr', 'Rafał', 'Alicja', 'Julia', 'Szymon'],
+        places:   ['VIP', 'Stół', 'Ruletka', 'Bar'],
+        items:    ['Marynarka', 'Żetony', 'Karta', 'Kieliszek'],
+      },
+
       // callback po kliknięciu „Zakończ poziom”
       onDeductionSubmit: ({ suspect, item, place }) => {
         console.log('Gracz wskazał:', suspect, item, place);

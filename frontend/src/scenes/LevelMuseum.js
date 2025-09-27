@@ -202,6 +202,12 @@ Twoim zadaniem jest ustalenie, kto znał zabezpieczenia i miał okazję, by ukra
         items:    ['Dziennik', 'Odłamki', 'Nagranie', 'VIP lista'],
       },
 
+      notes: {
+        characters: ['Anna', 'Marzena', 'Kacper', 'Tomasz', 'Weronika'],
+        places:   ['Sala', 'Awaryjne', 'Techniczne', 'Magazyn'],
+        items:    ['Dziennik', 'Odłamki', 'Nagranie', 'VIP lista'],
+      },
+
       // callback po kliknięciu „Zakończ poziom”
       onDeductionSubmit: ({ suspect, item, place }) => {
         console.log('Gracz wskazał:', suspect, item, place);

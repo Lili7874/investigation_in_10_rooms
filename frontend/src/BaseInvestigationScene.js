@@ -106,6 +106,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       ? this._cfg.placePositions : this._autoPositionsSecondary(this.places.length);
 
     this._dedLists = this._buildDeductionLists();
+    this._notesLists = this._buildNotesLists();
 
     this.createDialogPanel();
     this.createDialogLog();
@@ -300,96 +301,124 @@ export default class BaseInvestigationScene extends Phaser.Scene {
   }
 
   // ------------- POSTACIE / PRZEDMIOTY / MIEJSCA -------------
+  // ——— nazwy do Notatek zgodnie z tablicą dedukcji (kolejność indeksów) ———
+  _nameForCharacter(index, c) {
+    return this._notesLists?.characters?.[index]
+        || c.name || c.displayName
+        || this._dedLists?.suspects?.[index]
+        || c.key || 'Postać';
+  }
+  _nameForItem(index, it) {
+    return this._notesLists?.items?.[index]
+        || it.name || it.displayName
+        || this._dedLists?.items?.[index]
+        || it.key || 'Przedmiot';
+  }
+  _nameForPlace(index, pl) {
+    return this._notesLists?.places?.[index]
+        || pl.name || pl.displayName
+        || this._dedLists?.places?.[index]
+        || pl.key || 'Miejsce';
+  }
+
   spawnCharacters() {
-    this.characters.forEach((c, index) => {
-      const spot = {
-        x: (typeof c.x === 'number' ? c.x : (this.characterPositions[index]?.x ?? 0)),
-        y: (typeof c.y === 'number' ? c.y : (this.characterPositions[index]?.y ?? 0)),
-      };
+  this.characters.forEach((c, index) => {
+    const spot = {
+      x: (typeof c.x === 'number' ? c.x : (this.characterPositions[index]?.x ?? 0)),
+      y: (typeof c.y === 'number' ? c.y : (this.characterPositions[index]?.y ?? 0)),
+    };
 
-      const s = this.add.sprite(spot.x, spot.y, c.key);
-      s.setScale(typeof c.scale === 'number' ? c.scale : 1.1);
-      s.setDepth(10).setInteractive();
+    const s = this.add.sprite(spot.x, spot.y, c.key);
+    s.setScale(typeof c.scale === 'number' ? c.scale : 1.1);
+    s.setDepth(10).setInteractive();
 
-      s.on('pointerdown', () => {
-        this.showDialog(c.text, c.avatar?.key || c.avatar);
-        if (!this.shownDialogs.has(c.key)) {
-          this.shownDialogs.add(c.key);
-          this.addDialogEntry(c.name || 'Postać', c.text, c.avatar?.key || c.avatar);
-        }
-      });
-    });
-  }
+    const displayName = this._nameForCharacter(index, c);
 
-  spawnItems() {
-    this.items.forEach((it, index) => {
-      const spot = {
-        x: (typeof it.x === 'number' ? it.x : (this.itemPositions[index]?.x ?? 0)),
-        y: (typeof it.y === 'number' ? it.y : (this.itemPositions[index]?.y ?? 0)),
-      };
-
-      let go;
-      if (it.src || this.textures.exists(it.key)) {
-        go = this.add.sprite(spot.x, spot.y, it.key).setOrigin(0.5);
-        go.setScale(typeof it.scale === 'number' ? it.scale : 1.0);
-      } else {
-        const r = it.radius || 14;
-        const circle = this.add.circle(spot.x, spot.y, r, 0xffcc00, 0.9).setStrokeStyle(2, 0x000000, 0.9);
-        const lbl = this.add.text(spot.x, spot.y - (r + 18), it.label || (it.name || 'Znacznik'), {
-          fontFamily: 'Monaco, monospace', fontSize: '12px', color: '#ffffff', align: 'center'
-        }).setOrigin(0.5, 1);
-        this.tweens.add({ targets: circle, alpha: { from: 1, to: 0.4 }, yoyo: true, repeat: -1, duration: 900 });
-        go = this.add.container(0, 0, [circle, lbl]);
-        go.setSize(Math.max(40, r * 2 + 8), Math.max(40, r * 2 + 8)).setPosition(spot.x, spot.y);
+    s.on('pointerdown', () => {
+      this.showDialog(c.text, c.avatar?.key || c.avatar);
+      if (!this.shownDialogs.has(c.key)) {
+        this.shownDialogs.add(c.key);
+        this.addDialogEntry(displayName, c.text, c.avatar?.key || c.avatar);
       }
-
-      go.setDepth(5).setInteractive({ cursor: 'pointer' });
-
-      go.on('pointerdown', () => {
-        const avatarKey = it.avatar?.key || it.avatar;
-        this.showDialog(it.text || it.name || '...', avatarKey);
-        if (!this.shownDialogs.has(it.key)) {
-          this.shownDialogs.add(it.key);
-          this.addDialogEntry(it.name || 'Przedmiot', it.text || 'Oznaczono punkt zainteresowania.', avatarKey);
-        }
-      });
     });
-  }
+  });
+}
 
-  spawnPlaces() {
-    this.places.forEach((pl, index) => {
-      const spot = {
-        x: (typeof pl.x === 'number' ? pl.x : (this.placePositions[index]?.x ?? 0)),
-        y: (typeof pl.y === 'number' ? pl.y : (this.placePositions[index]?.y ?? 0)),
-      };
+spawnItems() {
+  this.items.forEach((it, index) => {
+    const spot = {
+      x: (typeof it.x === 'number' ? it.x : (this.itemPositions[index]?.x ?? 0)),
+      y: (typeof it.y === 'number' ? it.y : (this.itemPositions[index]?.y ?? 0)),
+    };
 
-      let go;
-      if (pl.src || this.textures.exists(pl.key)) {
-        go = this.add.sprite(spot.x, spot.y, pl.key).setOrigin(0.5);
-        go.setScale(typeof pl.scale === 'number' ? pl.scale : 1.0);
-      } else {
-        const r = pl.radius || 14;
-        const circle = this.add.circle(spot.x, spot.y, r, 0x00d1ff, 0.9).setStrokeStyle(2, 0x000000, 0.9);
-        const lbl = this.add.text(spot.x, spot.y - (r + 18), pl.label || (pl.name || 'Miejsce'), {
-          fontFamily: 'Monaco, monospace', fontSize: '12px', color: '#ffffff', align: 'center'
-        }).setOrigin(0.5, 1);
-        this.tweens.add({ targets: circle, alpha: { from: 1, to: 0.4 }, yoyo: true, repeat: -1, duration: 900 });
-        go = this.add.container(0, 0, [circle, lbl]);
-        go.setSize(Math.max(40, r * 2 + 8), Math.max(40, r * 2 + 8)).setPosition(spot.x, spot.y);
+    let go;
+    if (it.src || this.textures.exists(it.key)) {
+      go = this.add.sprite(spot.x, spot.y, it.key).setOrigin(0.5);
+      go.setScale(typeof it.scale === 'number' ? it.scale : 1.0);
+    } else {
+      const r = it.radius || 14;
+      const circle = this.add.circle(spot.x, spot.y, r, 0xffcc00, 0.9).setStrokeStyle(2, 0x000000, 0.9);
+      const lbl = this.add.text(spot.x, spot.y - (r + 18), it.label || (it.name || 'Znacznik'), {
+        fontFamily: 'Monaco, monospace', fontSize: '12px', color: '#ffffff', align: 'center'
+      }).setOrigin(0.5, 1);
+      this.tweens.add({ targets: circle, alpha: { from: 1, to: 0.4 }, yoyo: true, repeat: -1, duration: 900 });
+      go = this.add.container(0, 0, [circle, lbl]);
+      go.setSize(Math.max(40, r * 2 + 8), Math.max(40, r * 2 + 8)).setPosition(spot.x, spot.y);
+    }
+
+    go.setDepth(5).setInteractive({ cursor: 'pointer' });
+
+    const displayName = this._nameForItem(index, it);
+
+    go.on('pointerdown', () => {
+      const avatarKey = it.avatar?.key || it.avatar;
+      this.showDialog(it.text || it.name || '...', avatarKey);
+      if (!this.shownDialogs.has(it.key)) {
+        this.shownDialogs.add(it.key);
+        this.addDialogEntry(displayName, it.text || 'Oznaczono punkt zainteresowania.', avatarKey);
       }
-
-      go.setDepth(5).setInteractive({ cursor: 'pointer' });
-
-      go.on('pointerdown', () => {
-        const avatarKey = pl.avatar?.key || pl.avatar;
-        this.showDialog(pl.text || pl.name || '...', avatarKey);
-        if (!this.shownDialogs.has(pl.key)) {
-          this.shownDialogs.add(pl.key);
-          this.addDialogEntry(pl.name || 'Miejsce', pl.text || 'Oznaczono punkt zainteresowania.', avatarKey);
-        }
-      });
     });
-  }
+  });
+}
+
+
+spawnPlaces() {
+  this.places.forEach((pl, index) => {
+    const spot = {
+      x: (typeof pl.x === 'number' ? pl.x : (this.placePositions[index]?.x ?? 0)),
+      y: (typeof pl.y === 'number' ? pl.y : (this.placePositions[index]?.y ?? 0)),
+    };
+
+    let go;
+    if (pl.src || this.textures.exists(pl.key)) {
+      go = this.add.sprite(spot.x, spot.y, pl.key).setOrigin(0.5);
+      go.setScale(typeof pl.scale === 'number' ? pl.scale : 1.0);
+    } else {
+      const r = pl.radius || 14;
+      const circle = this.add.circle(spot.x, spot.y, r, 0x00d1ff, 0.9).setStrokeStyle(2, 0x000000, 0.9);
+      const lbl = this.add.text(spot.x, spot.y - (r + 18), pl.label || (pl.name || 'Miejsce'), {
+        fontFamily: 'Monaco, monospace', fontSize: '12px', color: '#ffffff', align: 'center'
+      }).setOrigin(0.5, 1);
+      this.tweens.add({ targets: circle, alpha: { from: 1, to: 0.4 }, yoyo: true, repeat: -1, duration: 900 });
+      go = this.add.container(0, 0, [circle, lbl]);
+      go.setSize(Math.max(40, r * 2 + 8), Math.max(40, r * 2 + 8)).setPosition(spot.x, spot.y);
+    }
+
+    go.setDepth(5).setInteractive({ cursor: 'pointer' });
+
+    const displayName = this._nameForPlace(index, pl);
+
+    go.on('pointerdown', () => {
+      const avatarKey = pl.avatar?.key || pl.avatar;
+      this.showDialog(pl.text || pl.name || '...', avatarKey);
+      if (!this.shownDialogs.has(pl.key)) {
+        this.shownDialogs.add(pl.key);
+        this.addDialogEntry(displayName, pl.text || 'Oznaczono punkt zainteresowania.', avatarKey);
+      }
+    });
+  });
+}
+
 
   // ------------- NOTATKI -------------
   createDialogLog() {
@@ -441,6 +470,17 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       places:   fallback(places,   ['Miejsce 1', 'Miejsce 2', 'Miejsce 3', 'Miejsce 4']),
       items:    fallback(items,    ['Przedmiot 1', 'Przedmiot 2', 'Przedmiot 3', 'Przedmiot 4']),
     };
+  }
+
+  // ------------- NOTATNIK -------------
+  _buildNotesLists() {
+  const n = this._cfg.notes || {};
+  const pick = (arr, fb) => (Array.isArray(arr) && arr.length ? arr.slice() : fb || []);
+  return {
+    characters: pick(n.characters, this._dedLists?.suspects),
+    items:      pick(n.items,      this._dedLists?.items),
+    places:     pick(n.places,     this._dedLists?.places),
+  };
   }
 
   // ------------- TABLICA DEDUKCJI -------------

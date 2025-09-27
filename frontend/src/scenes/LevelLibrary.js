@@ -202,6 +202,12 @@ Ustal, kto miał realną możliwość wejścia do magazynu i dostęp do sejfu, o
         items:    ['Telefon', 'Karta', 'Lampka', 'Kadr'],
       },
 
+      notes: {
+        characters: ['Rafał', 'Julia', 'Jakub', 'Weronika', 'Szymon'],
+        places:   ['Czytelnia', 'Magazyn', 'Lada', 'Korytarz'],
+        items:    ['Telefon', 'Karta', 'Lampka', 'Kadr'],
+      },
+
       // callback po kliknięciu „Zakończ poziom”
       onDeductionSubmit: ({ suspect, item, place }) => {
         console.log('Gracz wskazał:', suspect, item, place);

@@ -202,6 +202,12 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto z czwórki podejr
         items:    ['Kroplówka', 'Identyfikator', 'Dokumenty', 'Papierosy'],
       },
 
+      notes: {
+        characters: ['Anna', 'Tomasz', 'Weronika', 'Kacper', 'Marzena'],
+        places:   ['Sala', 'Pokój', 'OIOM', 'Korytarz'],
+        items:    ['Kroplówka', 'Identyfikator', 'Dokumenty', 'Papierosy'],
+      },
+
       // callback po kliknięciu „Zakończ poziom”
       onDeductionSubmit: ({ suspect, item, place }) => {
         console.log('Gracz wskazał:', suspect, item, place);

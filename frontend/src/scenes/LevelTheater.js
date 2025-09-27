@@ -189,6 +189,12 @@ Przesłuchaj podejrzanych i świadka, ustal motyw oraz okazję do sabotażu, a n
         items:    ['Nożyce', 'Lina', 'Notatki/List', 'Marynarka'],
       },
 
+      notes: {
+        characters: ['Alicja', 'Michał', 'Piotr', 'Julia', 'Szymon'],
+        places:   ['Kulisy', 'Stolik', 'Garderoba', 'Wejście'],
+        items:    ['Nożyce', 'Lina', 'Notatki/List', 'Marynarka'],
+      },
+
       // callback po kliknięciu „Zakończ poziom”
       onDeductionSubmit: ({ suspect, item, place }) => {
         console.log('Gracz wskazał:', suspect, item, place);

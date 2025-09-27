@@ -192,6 +192,12 @@ Ustal, kto z czterech podejrzanych miał realną możliwość przejęcia teczki 
         items:    ['Teczka', 'Kadr K-3', 'Wózek', 'Walizka'],
       },
 
+      notes: {
+        characters: ['Anna', 'Tomasz', 'Weronika', 'Kacper', 'Julia'],
+        places:   ['Peron', 'Tunel', 'Zaplecze', 'Hala'],
+        items:    ['Teczka', 'Kadr K-3', 'Wózek', 'Walizka'],
+      },
+
       // callback po kliknięciu „Zakończ poziom”
       onDeductionSubmit: ({ suspect, item, place }) => {
         console.log('Gracz wskazał:', suspect, item, place);
