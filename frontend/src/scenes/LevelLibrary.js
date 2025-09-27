@@ -1,3 +1,4 @@
+// src/scenes/LevelLibrary.js
 /* 
 Rozstrzygnięcie (ukryta prawda – poziom 7)
 
@@ -65,19 +66,24 @@ Ustal, kto miał realną możliwość wejścia do magazynu i dostęp do sejfu, o
 
       // === POSTACIE ===
       characters: [
-        { key: 'character1', src: character1, text: 'To na pewno pomyłka, tylko oddawałem książki.', avatar: { key: 'avatar1', src: avatar1 } }, // Rafał
-        { key: 'character2', src: character2, text: 'Miałam tylko zapytać o rękopis...', avatar: { key: 'avatar2', src: avatar2 } }, // Julia
-        { key: 'character3', src: character3, text: 'Nie życzę sobie insynuacji.', avatar: { key: 'avatar3', src: avatar3 } }, // Jakub
-        { key: 'character4', src: character4, text: 'Notowałam układ kluczy do roli!', avatar: { key: 'avatar4', src: avatar4 } }, // Weronika
-        { key: 'character5', src: character5, text: 'Światło migało… tak koło szóstej.', avatar: { key: 'avatar5', src: avatar5 } }, // Szymon
+        { key: 'character1', src: character1, text: 'To na pewno pomyłka, tylko oddawałem książki.', avatar: { key: 'avatar1', src: avatar1 } },
+        { key: 'character2', src: character2, text: 'Miałam tylko zapytać o rękopis...', avatar: { key: 'avatar2', src: avatar2 } },
+        { key: 'character3', src: character3, text: 'Nie życzę sobie insynuacji.', avatar: { key: 'avatar3', src: avatar3 } },
+        { key: 'character4', src: character4, text: 'Notowałam układ kluczy do roli!', avatar: { key: 'avatar4', src: avatar4 } },
+        { key: 'character5', src: character5, text: 'Światło migało… tak koło szóstej.', avatar: { key: 'avatar5', src: avatar5 } },
       ],
 
-      // === PRZEDMIOTY (opis + grafika; rozmiar przez scale) ===
+      // === PRZEDMIOTY (4) — ROZSZERZONE PODPOWIEDZI (poziom 7) ===
       items: [
         {
           key: 'telefon',
           name: 'Telefon bibliotekarza',
-          text: 'Ostatnie połączenie o 05:58 (numer zastrzeżony); notatka „przy sejfie”.',
+          text: [
+            'Rejestr: ostatnie połączenie o 05:58 (numer zastrzeżony).',
+            'Na kartce pod telefonem: ołówek „przy sejfie” — skrótowa notatka z rozmowy.',
+            'Korelacja czasu: świadek wskazuje migające światło w magazynie ok. 06:00.',
+            'Wskazówka: połącz z miejscem „Magazyn (z sejfem)” — otwarcie bez śladów włamania.'
+          ].join('\n'),
           src: require('../assets/items/telefon.png'),
           avatar: { key: 'telefon', src: require('../assets/items/telefon.png') },
           scale: 0.05,
@@ -85,7 +91,12 @@ Ustal, kto miał realną możliwość wejścia do magazynu i dostęp do sejfu, o
         {
           key: 'karta_rewersowa',
           name: 'Karta rewersowa manuskryptu',
-          text: 'Na karcie Julii widnieje brakujący manuskrypt; „tylko pytała”, ale wpis ją wiąże z rękopisem.',
+          text: [
+            'Sygnatura brakującego rękopisu wpisana przy nazwisku: „Julia …”.',
+            'Stempel „wgląd na miejscu” — legalny pretekst do rozmowy o sejfie.',
+            'Zagięty róg i świeży grafit przy sygnaturze — karta była w użyciu tej nocy.',
+            'Wskazówka: jedyny jawny łącznik osoby z konkretnym manuskryptem.'
+          ].join('\n'),
           src: require('../assets/items/karta_rewersowa.png'),
           avatar: { key: 'karta_rewersowa', src: require('../assets/items/karta_rewersowa.png') },
           scale: 0.05,
@@ -93,7 +104,11 @@ Ustal, kto miał realną możliwość wejścia do magazynu i dostęp do sejfu, o
         {
           key: 'lampka',
           name: 'Przewrócona lampka',
-          text: 'Ślady szarpaniny w czytelni; potłuczone szkło, odciski nieczytelne (rękawiczki?).',
+          text: [
+            'Rozprysk szkła po lewej stronie blatu — przewrócona podczas szarpaniny.',
+            'Metalowy klosz zarysowany, wtyczka wyrwana częściowo z gniazda.',
+            'Wskazówka: finał starcia miał miejsce w czytelni, nie w magazynie.'
+          ].join('\n'),
           src: require('../assets/items/lampka.png'),
           avatar: { key: 'lampka', src: require('../assets/items/lampka.png') },
           scale: 0.05,
@@ -101,19 +116,27 @@ Ustal, kto miał realną możliwość wejścia do magazynu i dostęp do sejfu, o
         {
           key: 'kadr',
           name: 'Kadr z korytarza (kamera K-2)',
-          text: 'Rafał przy drzwiach magazynu 05:57–05:59; na ujęciu nie wchodzi do środka.',
+          text: [
+            'Rafał przy drzwiach magazynu 05:57–05:59; na ujęciu nie wchodzi do środka.',
+            'Kierunek spojrzenia na tabliczki, nie na klamkę — wygląda na zagubienie.',
+            'Wskazówka: silny, lecz mylący trop — nie łączy się z otwarciem sejfu o 06:00.'
+          ].join('\n'),
           src: require('../assets/items/kadr.png'),
           avatar: { key: 'kadr_korytarz', src: require('../assets/items/kadr.png') },
           scale: 0.05,
         },
       ],
 
-      // === MIEJSCA (jak itemy – interaktywne elementy) ===
+      // === MIEJSCA (4) — ROZSZERZONE PODPOWIEDZI (poziom 7) ===
       places: [
         {
           key: 'czytelnia',
           name: 'Czytelnia',
-          text: 'Miejsce zbrodni; zielona lampka włączona, lampka biurkowa przewrócona.',
+          text: [
+            'Miejsce zbrodni: zielona lampka wciąż świeci, biurkowa — przewrócona.',
+            'Ślady przesunięcia krzesła i rozrzucone karty katalogowe.',
+            'Wskazówka: tu dochodzi do próby odebrania manuskryptu i eskalacji.'
+          ].join('\n'),
           src: require('../assets/places/czytelnia.png'),
           avatar: { key: 'czytelnia', src: require('../assets/places/czytelnia.png') },
           scale: 0.05,
@@ -121,7 +144,11 @@ Ustal, kto miał realną możliwość wejścia do magazynu i dostęp do sejfu, o
         {
           key: 'magazyn_sejf',
           name: 'Magazyn (z sejfem)',
-          text: 'Światło włączane/wyłączane ok. 06:00; brak śladów włamania do sejfu.',
+          text: [
+            'Światło włączane/wyłączane około 06:00 (obserwacja świadka).',
+            'Sejf bez śladów włamania — otwierany kluczem/autoryzacją.',
+            'Wskazówka: koreluj z „Telefon bibliotekarza” (05:58) i „Kartą rewersową”.'
+          ].join('\n'),
           src: require('../assets/places/magazyn.png'),
           avatar: { key: 'magazyn_sejf', src: require('../assets/places/magazyn.png') },
           scale: 0.05,
@@ -129,7 +156,11 @@ Ustal, kto miał realną możliwość wejścia do magazynu i dostęp do sejfu, o
         {
           key: 'lada_ksiega',
           name: 'Lada / księga odwiedzin',
-          text: 'Wyrwane zapisy; faktyczna kolejność wejść ukryta.',
+          text: [
+            'Brakuje kilku wierszy — świeżo wyrwane kartki tuszują faktyczną kolejność wejść.',
+            'Na marginesie ślad grafitu zgodny z sygnaturą brakującego rękopisu.',
+            'Wskazówka: miejsce manipulacji wątkami „kto i kiedy był pierwszy”.'
+          ].join('\n'),
           src: require('../assets/places/lada.png'),
           avatar: { key: 'lada_ksiega', src: require('../assets/places/lada.png') },
           scale: 0.05,
@@ -137,7 +168,11 @@ Ustal, kto miał realną możliwość wejścia do magazynu i dostęp do sejfu, o
         {
           key: 'korytarz_kamera',
           name: 'Korytarz z kamerą',
-          text: 'Ujęcie Rafała koło magazynu (05:57–05:59); koreluje z 06:00 z zegara w hallu.',
+          text: [
+            'Ujęcie Rafała koło magazynu 05:57–05:59; zegar w hallu wybija 06:00.',
+            'Brak nagrania wejścia do magazynu — kadr pokazuje tylko obecność w pobliżu.',
+            'Wskazówka: zestaw z „Magazyn (z sejfem)” — kto realnie mógł otworzyć sejf?'
+          ].join('\n'),
           src: require('../assets/places/korytarz.png'),
           avatar: { key: 'korytarz_kamera', src: require('../assets/places/korytarz.png') },
           scale: 0.05,
@@ -147,8 +182,8 @@ Ustal, kto miał realną możliwość wejścia do magazynu i dostęp do sejfu, o
       // === POZYCJE PRZEDMIOTÓW (kolejność jak w "items") ===
       itemPositions: [
         { x: 0.40 * window.innerWidth, y: 0.40 * window.innerHeight }, // telefon_bibliotekarza
-        { x: 0.55 * window.innerWidth, y: 0.38 * window.innerHeight },// karta_rewersowa
-        { x: 0.50 * window.innerWidth, y: 0.66 * window.innerHeight },	// lampka_przewrocona	
+        { x: 0.55 * window.innerWidth, y: 0.38 * window.innerHeight }, // karta_rewersowa
+        { x: 0.50 * window.innerWidth, y: 0.66 * window.innerHeight }, // lampka_przewrocona
         { x: 0.40 * window.innerWidth, y: 0.75 * window.innerHeight }, // kadr_korytarz
       ],
 
@@ -175,3 +210,4 @@ Ustal, kto miał realną możliwość wejścia do magazynu i dostęp do sejfu, o
     });
   }
 }
+
