@@ -35,6 +35,18 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     this._dedInputs = null;
   }
 
+  // === helpers: namespacing kluczy tekstur dla każdej sceny ===
+  _texKey(key) {
+    return `${this.scene.key}__${key}`;
+  }
+  _getAvatarBase64(key) {
+    if (!key) return '';
+    const ns = this._texKey(key);
+    try { return this.textures.getBase64(ns); } catch (_) {}
+    try { return this.textures.getBase64(key); } catch (_) {}
+    return '';
+  }
+
   // ——— twarde wyłączenie innych scen ———
   _enforceSingleActiveScene() {
     const mgr = this.scene.manager;
@@ -48,32 +60,40 @@ export default class BaseInvestigationScene extends Phaser.Scene {
 
   // ------------- ŁADOWANIE -------------
   preload() {
-    this.load.image(this._cfg.bgKey, this._cfg.bgSrc);
+    // Tło (ładujemy pod namespaced kluczem, NIC nie usuwamy w preload)
+    const bgNs = this._texKey(this._cfg.bgKey);
+    if (!this.textures.exists(bgNs)) {
+      this.load.image(bgNs, this._cfg.bgSrc);
+    }
+
     if (!this.cache.audio.exists('click')) this.load.audio('click', 'assets/click.mp3');
-    if (!this.cache.audio.exists('bgm')) this.load.audio('bgm', 'assets/ambient.mp3');
+    if (!this.cache.audio.exists('bgm'))   this.load.audio('bgm',   'assets/ambient.mp3');
 
+    const loadIfNeeded = (key, src) => {
+      if (!key || !src) return;
+      const ns = this._texKey(key);
+      if (!this.textures.exists(ns)) this.load.image(ns, src);
+    };
+
+    // Postacie + avatary
     (this._cfg.characters || []).forEach(c => {
-      if (c.src && !this.textures.exists(c.key)) this.load.image(c.key, c.src);
+      loadIfNeeded(c.key, c.src);
       const av = c.avatar;
-      if (av && typeof av === 'object' && av.src && !this.textures.exists(av.key)) {
-        this.load.image(av.key, av.src);
-      }
+      if (av && typeof av === 'object') loadIfNeeded(av.key, av.src);
     });
 
+    // Przedmioty + avatary
     (this._cfg.items || []).forEach(it => {
-      if (it.src && !this.textures.exists(it.key)) this.load.image(it.key, it.src);
+      loadIfNeeded(it.key, it.src);
       const av = it.avatar;
-      if (av && typeof av === 'object' && av.src && !this.textures.exists(av.key)) {
-        this.load.image(av.key, av.src);
-      }
+      if (av && typeof av === 'object') loadIfNeeded(av.key, av.src);
     });
 
+    // Miejsca + avatary
     (this._cfg.places || []).forEach(pl => {
-      if (pl.src && !this.textures.exists(pl.key)) this.load.image(pl.key, pl.src);
+      loadIfNeeded(pl.key, pl.src);
       const av = pl.avatar;
-      if (av && typeof av === 'object' && av.src && !this.textures.exists(av.key)) {
-        this.load.image(av.key, av.src);
-      }
+      if (av && typeof av === 'object') loadIfNeeded(av.key, av.src);
     });
   }
 
@@ -87,7 +107,8 @@ export default class BaseInvestigationScene extends Phaser.Scene {
 
     const { width, height } = this.sys.game.canvas;
 
-    const bg = this.add.image(width / 2, height / 2, this._cfg.bgKey);
+    // Tło: używamy namespaced klucza
+    const bg = this.add.image(width / 2, height / 2, this._texKey(this._cfg.bgKey));
     const scale = Math.min(width / bg.width, height / bg.height) * 1.1;
     bg.setScale(scale).setOrigin(0.5, 0.5);
 
@@ -242,6 +263,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     const btnW = 200, btnH = 48;
     const btnX = width / 2, btnY = (height + panelH) / 2 - 40;
 
+    // === PRZYCISK START z pełną strefą kliknięcia ===
     const btn = this.add.container(btnX, btnY).setDepth(2003).setScrollFactor(0);
     const btnGfx = this.add.graphics();
     btnGfx.fillStyle(0x3e0f6f, 1);
@@ -253,15 +275,18 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       fontFamily: 'Monaco, monospace', fontSize: '15px', color: '#FFFFFF'
     }).setOrigin(0.5);
 
-    btn.add([btnGfx, btnTxt]);
+    // pełne hit-area
+    const hit = this.add.zone(0, 0, btnW, btnH).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
+
+    btn.add([btnGfx, btnTxt, hit]);
     btn.setSize(btnW, btnH);
-    btn.setInteractive(new Phaser.Geom.Rectangle(-btnW / 2, -btnH / 2, btnW, btnH), Phaser.Geom.Rectangle.Contains);
-    btn.on('pointerover', () => btnGfx.setAlpha(0.9));
-    btn.on('pointerout', () => btnGfx.setAlpha(1));
 
-    this._introUi.push(shade, panelGfx, title, body, btn, btnGfx, btnTxt);
+    hit.on('pointerover', () => btnGfx.setAlpha(0.9));
+    hit.on('pointerout',  () => btnGfx.setAlpha(1));
+    hit.on('pointerdown', (pointer) => {
+      if (pointer?.event?.stopImmediatePropagation) pointer.event.stopImmediatePropagation();
+      if (pointer?.event?.stopPropagation) pointer.event.stopPropagation();
 
-    btn.on('pointerdown', () => {
       if (board) board.style.display = '';
       if (notes) notes.style.display = '';
       this._clearIntroUi();
@@ -276,6 +301,8 @@ export default class BaseInvestigationScene extends Phaser.Scene {
 
       this.layoutTimer();
     });
+
+    this._introUi.push(shade, panelGfx, title, body, btn, btnGfx, btnTxt, hit);
   }
 
   // ------------- DIALOG PANEL -------------
@@ -295,7 +322,8 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     this.dialogText.setText(text);
     if (this.avatarImage.avatarSprite) this.avatarImage.avatarSprite.destroy();
     if (avatarKey) {
-      this.avatarImage.avatarSprite = this.add.sprite(this.avatarImage.x, this.avatarImage.y, avatarKey);
+      const ns = this._texKey(avatarKey);
+      this.avatarImage.avatarSprite = this.add.sprite(this.avatarImage.x, this.avatarImage.y, ns);
       this.avatarImage.avatarSprite.setScale(0.25).setOrigin(0.5, 0.5);
     }
   }
@@ -322,103 +350,101 @@ export default class BaseInvestigationScene extends Phaser.Scene {
   }
 
   spawnCharacters() {
-  this.characters.forEach((c, index) => {
-    const spot = {
-      x: (typeof c.x === 'number' ? c.x : (this.characterPositions[index]?.x ?? 0)),
-      y: (typeof c.y === 'number' ? c.y : (this.characterPositions[index]?.y ?? 0)),
-    };
+    this.characters.forEach((c, index) => {
+      const spot = {
+        x: (typeof c.x === 'number' ? c.x : (this.characterPositions[index]?.x ?? 0)),
+        y: (typeof c.y === 'number' ? c.y : (this.characterPositions[index]?.y ?? 0)),
+      };
 
-    const s = this.add.sprite(spot.x, spot.y, c.key);
-    s.setScale(typeof c.scale === 'number' ? c.scale : 1.1);
-    s.setDepth(10).setInteractive();
+      const s = this.add.sprite(spot.x, spot.y, this._texKey(c.key));
+      s.setScale(typeof c.scale === 'number' ? c.scale : 1.1);
+      s.setDepth(10).setInteractive();
 
-    const displayName = this._nameForCharacter(index, c);
+      const displayName = this._nameForCharacter(index, c);
 
-    s.on('pointerdown', () => {
-      this.showDialog(c.text, c.avatar?.key || c.avatar);
-      if (!this.shownDialogs.has(c.key)) {
-        this.shownDialogs.add(c.key);
-        this.addDialogEntry(displayName, c.text, c.avatar?.key || c.avatar);
-      }
+      s.on('pointerdown', () => {
+        this.showDialog(c.text, c.avatar?.key || c.avatar);
+        if (!this.shownDialogs.has(c.key)) {
+          this.shownDialogs.add(c.key);
+          this.addDialogEntry(displayName, c.text, c.avatar?.key || c.avatar);
+        }
+      });
     });
-  });
-}
+  }
 
-spawnItems() {
-  this.items.forEach((it, index) => {
-    const spot = {
-      x: (typeof it.x === 'number' ? it.x : (this.itemPositions[index]?.x ?? 0)),
-      y: (typeof it.y === 'number' ? it.y : (this.itemPositions[index]?.y ?? 0)),
-    };
+  spawnItems() {
+    this.items.forEach((it, index) => {
+      const spot = {
+        x: (typeof it.x === 'number' ? it.x : (this.itemPositions[index]?.x ?? 0)),
+        y: (typeof it.y === 'number' ? it.y : (this.itemPositions[index]?.y ?? 0)),
+      };
 
-    let go;
-    if (it.src || this.textures.exists(it.key)) {
-      go = this.add.sprite(spot.x, spot.y, it.key).setOrigin(0.5);
-      go.setScale(typeof it.scale === 'number' ? it.scale : 1.0);
-    } else {
-      const r = it.radius || 14;
-      const circle = this.add.circle(spot.x, spot.y, r, 0xffcc00, 0.9).setStrokeStyle(2, 0x000000, 0.9);
-      const lbl = this.add.text(spot.x, spot.y - (r + 18), it.label || (it.name || 'Znacznik'), {
-        fontFamily: 'Monaco, monospace', fontSize: '12px', color: '#ffffff', align: 'center'
-      }).setOrigin(0.5, 1);
-      this.tweens.add({ targets: circle, alpha: { from: 1, to: 0.4 }, yoyo: true, repeat: -1, duration: 900 });
-      go = this.add.container(0, 0, [circle, lbl]);
-      go.setSize(Math.max(40, r * 2 + 8), Math.max(40, r * 2 + 8)).setPosition(spot.x, spot.y);
-    }
-
-    go.setDepth(5).setInteractive({ cursor: 'pointer' });
-
-    const displayName = this._nameForItem(index, it);
-
-    go.on('pointerdown', () => {
-      const avatarKey = it.avatar?.key || it.avatar;
-      this.showDialog(it.text || it.name || '...', avatarKey);
-      if (!this.shownDialogs.has(it.key)) {
-        this.shownDialogs.add(it.key);
-        this.addDialogEntry(displayName, it.text || 'Oznaczono punkt zainteresowania.', avatarKey);
+      let go;
+      if (it.src || this.textures.exists(this._texKey(it.key))) {
+        go = this.add.sprite(spot.x, spot.y, this._texKey(it.key)).setOrigin(0.5);
+        go.setScale(typeof it.scale === 'number' ? it.scale : 1.0);
+      } else {
+        const r = it.radius || 14;
+        const circle = this.add.circle(spot.x, spot.y, r, 0xffcc00, 0.9).setStrokeStyle(2, 0x000000, 0.9);
+        const lbl = this.add.text(spot.x, spot.y - (r + 18), it.label || (it.name || 'Znacznik'), {
+          fontFamily: 'Monaco, monospace', fontSize: '12px', color: '#ffffff', align: 'center'
+        }).setOrigin(0.5, 1);
+        this.tweens.add({ targets: circle, alpha: { from: 1, to: 0.4 }, yoyo: true, repeat: -1, duration: 900 });
+        go = this.add.container(0, 0, [circle, lbl]);
+        go.setSize(Math.max(40, r * 2 + 8), Math.max(40, r * 2 + 8)).setPosition(spot.x, spot.y);
       }
+
+      go.setDepth(5).setInteractive({ cursor: 'pointer' });
+
+      const displayName = this._nameForItem(index, it);
+
+      go.on('pointerdown', () => {
+        const avatarKey = it.avatar?.key || it.avatar;
+        this.showDialog(it.text || it.name || '...', avatarKey);
+        if (!this.shownDialogs.has(it.key)) {
+          this.shownDialogs.add(it.key);
+          this.addDialogEntry(displayName, it.text || 'Oznaczono punkt zainteresowania.', avatarKey);
+        }
+      });
     });
-  });
-}
+  }
 
+  spawnPlaces() {
+    this.places.forEach((pl, index) => {
+      const spot = {
+        x: (typeof pl.x === 'number' ? pl.x : (this.placePositions[index]?.x ?? 0)),
+        y: (typeof pl.y === 'number' ? pl.y : (this.placePositions[index]?.y ?? 0)),
+      };
 
-spawnPlaces() {
-  this.places.forEach((pl, index) => {
-    const spot = {
-      x: (typeof pl.x === 'number' ? pl.x : (this.placePositions[index]?.x ?? 0)),
-      y: (typeof pl.y === 'number' ? pl.y : (this.placePositions[index]?.y ?? 0)),
-    };
-
-    let go;
-    if (pl.src || this.textures.exists(pl.key)) {
-      go = this.add.sprite(spot.x, spot.y, pl.key).setOrigin(0.5);
-      go.setScale(typeof pl.scale === 'number' ? pl.scale : 1.0);
-    } else {
-      const r = pl.radius || 14;
-      const circle = this.add.circle(spot.x, spot.y, r, 0x00d1ff, 0.9).setStrokeStyle(2, 0x000000, 0.9);
-      const lbl = this.add.text(spot.x, spot.y - (r + 18), pl.label || (pl.name || 'Miejsce'), {
-        fontFamily: 'Monaco, monospace', fontSize: '12px', color: '#ffffff', align: 'center'
-      }).setOrigin(0.5, 1);
-      this.tweens.add({ targets: circle, alpha: { from: 1, to: 0.4 }, yoyo: true, repeat: -1, duration: 900 });
-      go = this.add.container(0, 0, [circle, lbl]);
-      go.setSize(Math.max(40, r * 2 + 8), Math.max(40, r * 2 + 8)).setPosition(spot.x, spot.y);
-    }
-
-    go.setDepth(5).setInteractive({ cursor: 'pointer' });
-
-    const displayName = this._nameForPlace(index, pl);
-
-    go.on('pointerdown', () => {
-      const avatarKey = pl.avatar?.key || pl.avatar;
-      this.showDialog(pl.text || pl.name || '...', avatarKey);
-      if (!this.shownDialogs.has(pl.key)) {
-        this.shownDialogs.add(pl.key);
-        this.addDialogEntry(displayName, pl.text || 'Oznaczono punkt zainteresowania.', avatarKey);
+      let go;
+      if (pl.src || this.textures.exists(this._texKey(pl.key))) {
+        go = this.add.sprite(spot.x, spot.y, this._texKey(pl.key)).setOrigin(0.5);
+        go.setScale(typeof pl.scale === 'number' ? pl.scale : 1.0);
+      } else {
+        const r = pl.radius || 14;
+        const circle = this.add.circle(spot.x, spot.y, r, 0x00d1ff, 0.9).setStrokeStyle(2, 0x000000, 0.9);
+        const lbl = this.add.text(spot.x, spot.y - (r + 18), pl.label || (pl.name || 'Miejsce'), {
+          fontFamily: 'Monaco, monospace', fontSize: '12px', color: '#ffffff', align: 'center'
+        }).setOrigin(0.5, 1);
+        this.tweens.add({ targets: circle, alpha: { from: 1, to: 0.4 }, yoyo: true, repeat: -1, duration: 900 });
+        go = this.add.container(0, 0, [circle, lbl]);
+        go.setSize(Math.max(40, r * 2 + 8), Math.max(40, r * 2 + 8)).setPosition(spot.x, spot.y);
       }
-    });
-  });
-}
 
+      go.setDepth(5).setInteractive({ cursor: 'pointer' });
+
+      const displayName = this._nameForPlace(index, pl);
+
+      go.on('pointerdown', () => {
+        const avatarKey = pl.avatar?.key || pl.avatar;
+        this.showDialog(pl.text || pl.name || '...', avatarKey);
+        if (!this.shownDialogs.has(pl.key)) {
+          this.shownDialogs.add(pl.key);
+          this.addDialogEntry(displayName, pl.text || 'Oznaczono punkt zainteresowania.', avatarKey);
+        }
+      });
+    });
+  }
 
   // ------------- NOTATKI -------------
   createDialogLog() {
@@ -430,8 +456,7 @@ spawnPlaces() {
   }
 
   addDialogEntry(name, text, avatarKey) {
-    let avatarDataUrl = '';
-    try { avatarDataUrl = this.textures.getBase64(avatarKey); } catch (_) { avatarDataUrl = ''; }
+    let avatarDataUrl = this._getAvatarBase64(avatarKey);
     const list = document.getElementById('dialog-log-list'); if (!list) return;
 
     const entry = document.createElement('div'); entry.className = 'dialog-entry';
@@ -474,13 +499,13 @@ spawnPlaces() {
 
   // ------------- NOTATNIK -------------
   _buildNotesLists() {
-  const n = this._cfg.notes || {};
-  const pick = (arr, fb) => (Array.isArray(arr) && arr.length ? arr.slice() : fb || []);
-  return {
-    characters: pick(n.characters, this._dedLists?.suspects),
-    items:      pick(n.items,      this._dedLists?.items),
-    places:     pick(n.places,     this._dedLists?.places),
-  };
+    const n = this._cfg.notes || {};
+    const pick = (arr, fb) => (Array.isArray(arr) && arr.length ? arr.slice() : fb || []);
+    return {
+      characters: pick(n.characters, this._dedLists?.suspects),
+      items:      pick(n.items,      this._dedLists?.items),
+      places:     pick(n.places,     this._dedLists?.places),
+    };
   }
 
   // ------------- TABLICA DEDUKCJI -------------
@@ -699,8 +724,6 @@ spawnPlaces() {
     const cfg = this.game?.config;
     if (cfg && Array.isArray(cfg.levelOrder) && cfg.levelOrder.length) return cfg.levelOrder.slice();
     if (Array.isArray(window.__LEVEL_ORDER__) && window.__LEVEL_ORDER__.length) return window.__LEVEL_ORDER__.slice();
-
-    // fallback: wszystkie zarejestrowane sceny zaczynające się od "Level"
     const mgr = this.scene.manager;
     const keys = Object.keys(mgr.keys || {});
     return keys.filter(k => /^Level/i.test(k));
@@ -709,7 +732,7 @@ spawnPlaces() {
     const order = this._resolveLevelOrder();
     const idx = order.indexOf(this.scene.key);
     if (idx === -1) return null;
-    return order[idx + 1] || null; // brak wrapowania – ostatni nie pokazuje przycisku
+    return order[idx + 1] || null;
   }
   _switchToScene(key) {
     if (!key) return;
@@ -769,7 +792,6 @@ spawnPlaces() {
     };
     btns.appendChild(close);
 
-    // Nowość: „Następny poziom” (tylko gdy jest poprawnie i znamy kolejkę)
     if (result.okAll) {
       const nextKey = this._getNextLevelKey();
       if (nextKey) {
@@ -785,7 +807,6 @@ spawnPlaces() {
         };
         btns.appendChild(nextBtn);
       } else {
-        // opcjonalnie: jeśli nie ma nextKey, pokaż powrót do selektora jeśli istnieje
         const mgr = this.scene.manager;
         if (mgr.keys && mgr.keys['LevelSelect']) {
           const backBtn = document.createElement('button');
@@ -874,6 +895,16 @@ spawnPlaces() {
     this.events.once(Phaser.Scenes.Events.DESTROY,  this.shutdown, this);
   }
 
+  _removeSceneTextures() {
+    const tm = this.textures;
+    const prefix = `${this.scene.key}__`;
+    Object.keys(tm.list).forEach(k => {
+      if (k.startsWith(prefix)) {
+        try { tm.remove(k); } catch (_) {}
+      }
+    });
+  }
+
   shutdown() {
     if (this._onSidebarToggle) {
       window.removeEventListener('sidebarToggle', this._onSidebarToggle);
@@ -921,6 +952,9 @@ spawnPlaces() {
     this.isPlaying = false;
     if (this.shownDialogs) this.shownDialogs.clear();
     this._dedInputs = null;
+
+    // usuń tylko tekstury tej sceny (po zniszczeniu obiektów)
+    this._removeSceneTextures();
   }
 
   destroy() { this.shutdown(); }
