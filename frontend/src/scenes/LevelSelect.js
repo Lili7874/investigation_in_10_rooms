@@ -1,48 +1,46 @@
+// src/scenes/LevelSelect.js
 import Phaser from 'phaser';
 import { LEVEL_KEYS } from '../levels';
+import { safeResume, bindVisibility, unbindVisibility } from '../audioSafe';
 
 export default class LevelSelect extends Phaser.Scene {
   constructor() {
     super({ key: 'LevelSelect' });
     this._onResizeMute = null;
+    this._onGlobalMuteChanged = null;
   }
   
   preload() {
-    // muzyka tła
+    // wspólny BGM
     if (!this.cache.audio.exists('bgm')) {
-      this.load.audio('bgm', 'assets/ambient.mp3'); // dostosuj ścieżkę
+      this.load.audio('bgm', 'assets/ambient.mp3');
     }
-    // kliknięcia
     if (!this.cache.audio.exists('click')) {
       this.load.audio('click', 'assets/click.mp3');
     }
   }
 
   create() {
-    // pokaż Sidebar (App.js nasłuchuje)
     window.dispatchEvent(new CustomEvent('sceneChange', { detail: 'LevelSelect' }));
 
-    // === USTAW KOLEJNOŚĆ POZIOMÓW W REGISTRY ===
-    // (BaseInvestigationScene użyje tego do przycisku "Następny poziom")
+    // kolejność poziomów
     const levelOrder = [
-      'LevelOffice', 'LevelRestaurant', 'LevelLibrary', 'LevelTrainstation',
-      'LevelTheater', 'LevelMuseum', 'LevelVillageHouse', 'LevelHospital', 'LevelCasino'
+      'LevelOffice','LevelRestaurant','LevelLibrary','LevelTrainstation',
+      'LevelTheater','LevelMuseum','LevelVillageHouse','LevelHospital','LevelCasino'
     ];
     this.game.registry.set('levelOrder', levelOrder);
 
     const { width, height } = this.scale;
 
-    // tło lekko przygaszone
+    // tło
     this.add.rectangle(width/2, height/2, width, height, 0x000000, 0.35);
 
     // tytuł
     this.add.text(width/2, 80, 'Wybierz poziom', {
-      fontFamily: 'Monaco, monospace',
-      fontSize: '32px',
-      color: '#FFFFFF'
+      fontFamily: 'Monaco, monospace', fontSize: '32px', color: '#FFFFFF'
     }).setOrigin(0.5);
 
-    // panel-lista (jak w Sidebarze, 1:1 układ)
+    // panel-lista
     const containerW = 420;
     const containerH = Math.min(520, height - 180);
     const cx = width/2, cy = height/2 + 20;
@@ -54,10 +52,9 @@ export default class LevelSelect extends Phaser.Scene {
     gfx.strokeRoundedRect(cx - containerW/2, cy - containerH/2, containerW, containerH, 14);
 
     const scrollArea = this.add.container(cx - containerW/2 + 16, cy - containerH/2 + 16);
-    const rowH = 44;
-    const gap = 10;
+    const rowH = 44, gap = 10;
 
-    // zbuduj wiersze „Poziom X”
+    // wiersze „Poziom X”
     const entries = Object.keys(LEVEL_KEYS).map(n => Number(n)).sort((a,b)=>a-b);
 
     entries.forEach((n, i) => {
@@ -66,36 +63,32 @@ export default class LevelSelect extends Phaser.Scene {
       const bg = this.add.rectangle(0, y, containerW - 32, rowH, 0xffffff, 0.06)
         .setOrigin(0,0).setStrokeStyle(1, 0xb983ff, 0.6);
       const label = this.add.text(12, y + 10, `Poziom ${n}`, {
-        fontFamily: 'Monaco, monospace',
-        fontSize: '18px',
-        color: '#FFFFFF'
+        fontFamily: 'Monaco, monospace', fontSize: '18px', color: '#FFFFFF'
       }).setOrigin(0,0);
 
-      // interakcja
       const hit = this.add.rectangle((containerW-32)/2, y + rowH/2, containerW - 32, rowH, 0x000000, 0)
         .setInteractive({ cursor: 'pointer' });
 
       hit.on('pointerover', () => { bg.setFillStyle(0xffffff, 0.10); });
       hit.on('pointerout',  () => { bg.setFillStyle(0xffffff, 0.06); });
       hit.on('pointerdown', () => {
+        try { this.sound.play('click', { volume: 0.8, detune: 50 }); } catch (_) {}
         const key = LEVEL_KEYS[n];
         if (key) {
-          this.sound.play('click', { volume: 0.8, detune: 50 });
-          // zapisz aktualnie wybrany level w registry (dla „Następny poziom”)
           this.game.registry.set('currentLevelKey', key);
           this.scene.start(key);
+          // zatrzymaj LevelSelect, żeby SHUTDOWN posprzątał (np. listenery)
+          this.scene.stop('LevelSelect');
         }
       });
 
       scrollArea.add([bg, label, hit]);
     });
-	
+
+    // wyloguj
     const logoutBtn = this.add.text(cx, cy + containerH/2 + 30, '🚪 Wyloguj', {
-      fontFamily: 'Monaco, monospace',
-      fontSize: '18px',
-      color: '#ff4444',
-      backgroundColor: '#220000',
-      padding: { x: 12, y: 6 }
+      fontFamily: 'Monaco, monospace', fontSize: '18px',
+      color: '#ff4444', backgroundColor: '#220000', padding: { x: 12, y: 6 }
     })
     .setOrigin(0.5)
     .setInteractive({ cursor: 'pointer' });
@@ -104,33 +97,37 @@ export default class LevelSelect extends Phaser.Scene {
     logoutBtn.on('pointerout',  () => logoutBtn.setStyle({ backgroundColor: '#220000' }));
     logoutBtn.on('pointerdown', () => {
       this.scene.start('LoginScene');
-    });
-	
-    // === MUZYKA + PRZYCISK WYCISZENIA ===
-
-    // odblokuj AudioContext po pierwszym kliknięciu (wymóg przeglądarek)
-    this.input.once('pointerdown', () => {
-      if (this.sound?.context?.state === 'suspended') {
-        this.sound.context.resume();
-      }
+      this.scene.stop('LevelSelect');
     });
 
-    // singleton – jeśli muzyka jeszcze nie gra, odpal ją raz
+    // === AUDIO ===
+    // odblokuj AudioContext po 1. interakcji (bezpiecznie)
+    this.input.once('pointerdown', () => safeResume(this));
+    // zdeduplikowana obsługa visibility (bez własnych listenerów)
+    bindVisibility(this, 'LevelSelect');
+
+    // globalny BGM (singleton)
     if (!this.game.__bgm) {
       this.game.__bgm = this.sound.add('bgm', { loop: true, volume: 0.5 });
       this.game.__bgm.play();
     }
-    this.bgm = this.game.__bgm;
+    this.bgm = this.game.__bgm; // nie pauzujemy/nie wznawiamy lokalnie
 
-    // stan ikony
-    this._musicMuted = !!this.bgm.isPaused;
+    // globalny mute z registry / localStorage
+    const reg = this.game.registry;
+    let gm = reg.get('globalMuted');
+    if (gm == null) {
+      gm = localStorage.getItem('globalMuted') === '1';
+      reg.set('globalMuted', gm);
+    }
+    this.sound.mute = !!gm;
 
     // przycisk 🔊/🔇
     const btnSize = 40, pad = 20;
     this.muteBtn = this.add.text(
       this.scale.width - btnSize - pad,
       this.scale.height - btnSize - pad,
-      this._musicMuted ? '🔇' : '🔊',
+      this.sound.mute ? '🔇' : '🔊',
       { fontFamily: 'Monaco, monospace', fontSize: '28px', color: '#FFFFFF' }
     )
     .setInteractive({ cursor: 'pointer' })
@@ -138,49 +135,57 @@ export default class LevelSelect extends Phaser.Scene {
     .setDepth(2000);
 
     this.muteBtn.on('pointerdown', (pointer) => {
-      if (pointer?.event?.stopImmediatePropagation) pointer.event.stopImmediatePropagation();
-      if (pointer?.event?.stopPropagation) pointer.event.stopPropagation();
-
-      if (!this.bgm) return;
-      this._musicMuted = !this._musicMuted;
-      if (this._musicMuted) {
-        this.bgm.pause();
-        this.muteBtn.setText('🔇');
-      } else {
-        this.bgm.resume();
-        this.muteBtn.setText('🔊');
-      }
+      pointer?.event?.stopImmediatePropagation?.();
+      pointer?.event?.stopPropagation?.();
+      const newMuted = !this.sound.mute;
+      this.sound.mute = newMuted;
+      this.game.registry.set('globalMuted', newMuted);
+      localStorage.setItem('globalMuted', newMuted ? '1' : '0');
+      this.muteBtn.setText(newMuted ? '🔇' : '🔊');
     });
 
-    // aktualizacja pozycji przy zmianie rozmiaru
+    // nasłuch zmian globalMuted z innych scen
+    this._onGlobalMuteChanged = (_parent, value) => {
+      this.sound.mute = !!value;
+      this.muteBtn?.setText(this.sound.mute ? '🔇' : '🔊');
+    };
+    reg.events.on('changedata-globalMuted', this._onGlobalMuteChanged);
+
+    // reposition mute button on resize
     this._onResizeMute = (gameSize) => {
       this.muteBtn?.setPosition(gameSize.width - btnSize - pad, gameSize.height - btnSize - pad);
     };
     this.scale.on('resize', this._onResizeMute);
 
-    // sprzątanie przy wyjściu ze sceny
+    // scroll listy
+    const totalH = entries.length * (rowH + gap) - gap;
+    const maxScroll = Math.max(0, totalH - (containerH - 32));
+    let scrollY = 0;
+    const applyScroll = () => {
+      scrollY = Phaser.Math.Clamp(scrollY, 0, maxScroll);
+      scrollArea.y = cy - containerH/2 + 16 - scrollY;
+    };
+    this.input.on('wheel', (_p, _o, dx, dy) => {
+      scrollY += (Math.abs(dy) > Math.abs(dx) ? dy : 0);
+      applyScroll();
+    });
+
+    // sprzątanie
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       if (this._onResizeMute) {
         this.scale.off('resize', this._onResizeMute);
         this._onResizeMute = null;
       }
+      if (this._onGlobalMuteChanged) {
+        this.game.registry.events.off('changedata-globalMuted', this._onGlobalMuteChanged);
+        this._onGlobalMuteChanged = null;
+      }
+
+      // zdejmij wspólny handler visibility dla tej sceny
+      unbindVisibility('LevelSelect');
+
       this.muteBtn?.destroy();
       this.muteBtn = null;
-    });
-
-    // proste „przewijanie” kółkiem myszy, gdy dużo poziomów
-    const totalH = entries.length * (rowH + gap) - gap;
-    const maxScroll = Math.max(0, totalH - (containerH - 32));
-    let scrollY = 0;
-
-    const applyScroll = () => {
-      scrollY = Phaser.Math.Clamp(scrollY, 0, maxScroll);
-      scrollArea.y = cy - containerH/2 + 16 - scrollY;
-    };
-
-    this.input.on('wheel', (_p, _o, dx, dy) => {
-      scrollY += (Math.abs(dy) > Math.abs(dx) ? dy : 0);
-      applyScroll();
     });
   }
 }

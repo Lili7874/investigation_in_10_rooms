@@ -1,6 +1,7 @@
 // src/scenes/BaseInvestigationScene.js
 import Phaser from 'phaser';
 import './GameScene.css';
+import { safeResume, bindVisibility, unbindVisibility } from './audioSafe';
 
 export default class BaseInvestigationScene extends Phaser.Scene {
   constructor(key, cfg) {
@@ -33,12 +34,13 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     this._dbKeyHandler = null;
 
     this._dedInputs = null;
+
+    // global mute (bez lokalnych visibility listenerów)
+    this._onGlobalMuteChanged = null;
   }
 
   // === helpers: namespacing kluczy tekstur dla każdej sceny ===
-  _texKey(key) {
-    return `${this.scene.key}__${key}`;
-  }
+  _texKey(key) { return `${this.scene.key}__${key}`; }
   _getAvatarBase64(key) {
     if (!key) return '';
     const ns = this._texKey(key);
@@ -62,9 +64,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
   preload() {
     // Tło (ładujemy pod namespaced kluczem, NIC nie usuwamy w preload)
     const bgNs = this._texKey(this._cfg.bgKey);
-    if (!this.textures.exists(bgNs)) {
-      this.load.image(bgNs, this._cfg.bgSrc);
-    }
+    if (!this.textures.exists(bgNs)) this.load.image(bgNs, this._cfg.bgSrc);
 
     if (!this.cache.audio.exists('click')) this.load.audio('click', 'assets/click.mp3');
     if (!this.cache.audio.exists('bgm'))   this.load.audio('bgm',   'assets/ambient.mp3');
@@ -149,32 +149,55 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     };
     window.addEventListener('sidebarToggle', this._onSidebarToggle);
 
-    this.input.once('pointerdown', () => {
-      if (this.sound?.context?.state === 'suspended') this.sound.context.resume();
-    });
+    // odblokowanie AudioContext po 1. kliknięciu – bezpiecznie
+    this.input.once('pointerdown', () => safeResume(this));
 
+    // --- MUZYKA TŁA (singleton) ---
     if (!this.game.__bgm) {
       this.game.__bgm = this.sound.add('bgm', { loop: true, volume: 0.5 });
       this.game.__bgm.play();
     }
     this.bgm = this.game.__bgm;
 
+    // --- GLOBAL MUTE: inicjalizacja i nasłuch ---
+    const reg = this.game.registry;
+    let gm = reg.get('globalMuted');
+    if (gm == null) {
+      gm = localStorage.getItem('globalMuted') === '1';
+      reg.set('globalMuted', gm);
+    }
+    this.sound.mute = !!gm;
+
+    this._onGlobalMuteChanged = (_parent, value) => {
+      this.sound.mute = !!value;
+      this.muteBtn?.setText(this.sound.mute ? '🔇' : '🔊');
+    };
+    reg.events.on('changedata-globalMuted', this._onGlobalMuteChanged);
+
+    // wspólny handler widoczności (brak lokalnego listenera)
+    bindVisibility(this, this.scene.key);
+
+    // --- PRZYCISK MUTE oparty o globalny stan ---
     const btnSize = 40, pad = 20;
-    this._musicMuted = !!this.bgm.isPaused;
     this.muteBtn = this.add.text(
       this.scale.width - btnSize - pad,
       this.scale.height - btnSize - pad,
-      this._musicMuted ? '🔇' : '🔊',
+      this.sound.mute ? '🔇' : '🔊',
       { fontFamily: 'Monaco, monospace', fontSize: '28px', color: '#FFFFFF' }
-    ).setInteractive({ cursor: 'pointer' }).setScrollFactor(0).setDepth(2000);
+    )
+    .setInteractive({ cursor: 'pointer' })
+    .setScrollFactor(0)
+    .setDepth(2000);
 
     this.muteBtn.on('pointerdown', (pointer) => {
       if (pointer?.event?.stopImmediatePropagation) pointer.event.stopImmediatePropagation();
       if (pointer?.event?.stopPropagation) pointer.event.stopPropagation();
-      if (!this.bgm) return;
-      this._musicMuted = !this._musicMuted;
-      if (this._musicMuted) { this.bgm.pause(); this.muteBtn.setText('🔇'); }
-      else { this.bgm.resume(); this.muteBtn.setText('🔊'); }
+
+      const newMuted = !this.sound.mute;
+      this.sound.mute = newMuted;
+      this.game.registry.set('globalMuted', newMuted);
+      localStorage.setItem('globalMuted', newMuted ? '1' : '0');
+      this.muteBtn.setText(newMuted ? '🔇' : '🔊');
     });
 
     this._onResizeMute = (gameSize) => {
@@ -284,9 +307,11 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     hit.on('pointerover', () => btnGfx.setAlpha(0.9));
     hit.on('pointerout',  () => btnGfx.setAlpha(1));
     hit.on('pointerdown', (pointer) => {
-      if (pointer?.event?.stopImmediatePropagation) pointer.event.stopImmediatePropagation();
-      if (pointer?.event?.stopPropagation) pointer.event.stopPropagation();
+      pointer?.event?.stopImmediatePropagation?.();
+      pointer?.event?.stopPropagation?.();
 
+      const board = document.getElementById('deduction-board');
+      const notes = document.getElementById('dialog-log');
       if (board) board.style.display = '';
       if (notes) notes.style.display = '';
       this._clearIntroUi();
@@ -329,7 +354,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
   }
 
   // ------------- POSTACIE / PRZEDMIOTY / MIEJSCA -------------
-  // ——— nazwy do Notatek zgodnie z tablicą dedukcji (kolejność indeksów) ———
   _nameForCharacter(index, c) {
     return this._notesLists?.characters?.[index]
         || c.name || c.displayName
@@ -477,23 +501,23 @@ export default class BaseInvestigationScene extends Phaser.Scene {
   _buildDeductionLists() {
     const d = this._cfg.deduction || {};
 
-    const suspects = d.suspects && d.suspects.length
+    const suspects = d.suspects?.length
       ? d.suspects.slice()
       : (this.characters || []).map(c => c.name || c.displayName || c.key).filter(Boolean);
 
-    const places = d.places && d.places.length
+    const places = d.places?.length
       ? d.places.slice()
       : (this.places || []).map(p => p.name || p.label || p.key).filter(Boolean);
 
-    const items = d.items && d.items.length
+    const items = d.items?.length
       ? d.items.slice()
       : (this.items || []).map(i => i.name || i.label || i.key).filter(Boolean);
 
-    const fallback = (arr, fb) => (arr && arr.length ? arr : fb);
+    const fb = (arr, def) => (arr && arr.length ? arr : def);
     return {
-      suspects: fallback(suspects, ['Podejrzany A', 'Podejrzany B', 'Podejrzany C', 'Podejrzany D']),
-      places:   fallback(places,   ['Miejsce 1', 'Miejsce 2', 'Miejsce 3', 'Miejsce 4']),
-      items:    fallback(items,    ['Przedmiot 1', 'Przedmiot 2', 'Przedmiot 3', 'Przedmiot 4']),
+      suspects: fb(suspects, ['Podejrzany A', 'Podejrzany B', 'Podejrzany C', 'Podejrzany D']),
+      places:   fb(places,   ['Miejsce 1', 'Miejsce 2', 'Miejsce 3', 'Miejsce 4']),
+      items:    fb(items,    ['Przedmiot 1', 'Przedmiot 2', 'Przedmiot 3', 'Przedmiot 4']),
     };
   }
 
@@ -906,22 +930,19 @@ export default class BaseInvestigationScene extends Phaser.Scene {
   }
 
   shutdown() {
-    if (this._onSidebarToggle) {
-      window.removeEventListener('sidebarToggle', this._onSidebarToggle);
-      this._onSidebarToggle = null;
+    if (this._onSidebarToggle) { window.removeEventListener('sidebarToggle', this._onSidebarToggle); this._onSidebarToggle = null; }
+    if (this._dbKeyHandler)    { document.removeEventListener('keydown', this._dbKeyHandler); this._dbKeyHandler = null; }
+    if (this._onResize)        { this.scale.off('resize', this._onResize); this._onResize = null; }
+    if (this._onResizeMute)    { this.scale.off('resize', this._onResizeMute); this._onResizeMute = null; }
+
+    // zdejmij nasłuch globalMute
+    if (this._onGlobalMuteChanged) {
+      this.game.registry.events.off('changedata-globalMuted', this._onGlobalMuteChanged);
+      this._onGlobalMuteChanged = null;
     }
-    if (this._dbKeyHandler) {
-      document.removeEventListener('keydown', this._dbKeyHandler);
-      this._dbKeyHandler = null;
-    }
-    if (this._onResize) {
-      this.scale.off('resize', this._onResize);
-      this._onResize = null;
-    }
-    if (this._onResizeMute) {
-      this.scale.off('resize', this._onResizeMute);
-      this._onResizeMute = null;
-    }
+
+    // zdejmij wspólny handler visibility dla tej sceny
+    unbindVisibility(this.scene.key);
 
     this._clearIntroUi();
     document.body.classList.remove('intro-active');

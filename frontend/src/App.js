@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Phaser from 'phaser';
 import LoginScene from './LoginScene';
+import RegisterScene from './RegisterScene';
 import LevelOffice from './scenes/LevelOffice';
 import LevelCasino from './scenes/LevelCasino';
 import LevelHospital from './scenes/LevelHospital';
@@ -26,7 +27,7 @@ const App = () => {
         height: window.innerHeight,
         parent: 'game-container',
         transparent: true,
-        scene: [LoginScene, LevelSelect, LevelOffice, LevelRestaurant, LevelLibrary, LevelTrainstation, LevelTheater, LevelMuseum, LevelVillageHouse, LevelHospital, LevelCasino /*, kolejne level-e */],
+        scene: [LoginScene, RegisterScene, LevelSelect, LevelOffice, LevelRestaurant, LevelLibrary, LevelTrainstation, LevelTheater, LevelMuseum, LevelVillageHouse, LevelHospital, LevelCasino /*, kolejne level-e */],
       });
 	const onLevelSelect = (e) => {
 		const key = e.detail?.key;
