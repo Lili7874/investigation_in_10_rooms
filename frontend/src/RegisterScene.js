@@ -1,14 +1,14 @@
 // src/scenes/RegisterScene.js
 import Phaser from 'phaser';
 import './LoginScene.css';
-import { safeResume, safeSuspend } from './audioSafe';
+import { safeResume, bindVisibility, unbindVisibility } from './audioSafe';
 
 export default class RegisterScene extends Phaser.Scene {
   constructor() {
     super({ key: 'RegisterScene' });
     this._onGlobalMuteChanged = null;
     this._onResizeMute = null;
-    this._onVisibilityChange = null;
+    this._hideCssEl = null;
   }
 
   preload() {
@@ -19,9 +19,18 @@ export default class RegisterScene extends Phaser.Scene {
   }
 
   create() {
-    // Powiadom aplikację o zmianie sceny i zamknij sidebar (Sidebar sam reaguje i się ukrywa)
-    window.dispatchEvent(new CustomEvent('sceneChange', { detail: 'RegisterScene' }));
+    // Powiadom aplikację o zmianie sceny i zamknij sidebar (React Sidebar nasłuchuje)
+    window.dispatchEvent(new CustomEvent('sceneChange',   { detail: 'RegisterScene' }));
     window.dispatchEvent(new CustomEvent('sidebarToggle', { detail: { open: false } }));
+
+    // Dodatkowy bezpiecznik: ukryj ikonkę menu i sam panel (usuniemy przy SHUTDOWN)
+    this._hideCssEl = document.createElement('style');
+    this._hideCssEl.id = '__hide_sidebar_in_register';
+    this._hideCssEl.textContent = `
+      .menu-icon { display: none !important; visibility: hidden !important; }
+      .sidebar   { display: none !important; visibility: hidden !important; }
+    `;
+    document.head.appendChild(this._hideCssEl);
 
     // Posprzątaj ewentualne UI z innych scen
     ['deduction-board', 'dialog-log', 'deduction-result'].forEach(id => {
@@ -42,6 +51,8 @@ export default class RegisterScene extends Phaser.Scene {
 
     // Bezpieczny „unlock” audio po 1. interakcji
     this.input.once('pointerdown', () => safeResume(this));
+    // Jednolita obsługa visibility (jak w LoginScene)
+    bindVisibility(this, 'RegisterScene');
 
     // Globalny mute (registry/localStorage)
     const reg = this.game.registry;
@@ -97,16 +108,9 @@ export default class RegisterScene extends Phaser.Scene {
     };
     this.scale.on('resize', this._onResizeMute);
 
-    // visibilitychange -> bezpieczne suspend/resume audio
-    this._onVisibilityChange = () => {
-      if (document.hidden) safeSuspend(this);
-      else safeResume(this);
-    };
-    document.addEventListener('visibilitychange', this._onVisibilityChange);
-
     // ===== UI rejestracji =====
     const ui = document.getElementById('login-ui');
-    ui.innerHTML = '';
+    if (ui) ui.innerHTML = '';
 
     const title = document.createElement('h1');
     title.innerText = 'Rejestracja';
@@ -194,7 +198,7 @@ export default class RegisterScene extends Phaser.Scene {
       spinner,
       backToLogin
     );
-    ui.appendChild(form);
+    if (ui) ui.appendChild(form);
 
     // Walidacja i submit
     const isSubmitting = { value: false };
@@ -270,7 +274,7 @@ export default class RegisterScene extends Phaser.Scene {
         playSfx('click', { volume: 0.8, detune: 50 });
 
         setTimeout(() => {
-          ui.innerHTML = '';
+          if (ui) ui.innerHTML = '';
           this.video?.stop(); this.video?.destroy();
           if (this.ambient) { this.ambient.stop(); this.ambient.destroy(); this.ambient = null; }
           this.sound.removeByKey && this.sound.removeByKey('ambient');
@@ -297,8 +301,19 @@ export default class RegisterScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       try {
         if (this._onResizeMute) { this.scale.off('resize', this._onResizeMute); this._onResizeMute = null; }
-        if (this._onGlobalMuteChanged) { this.game.registry.events.off('changedata-globalMuted', this._onGlobalMuteChanged); this._onGlobalMuteChanged = null; }
-        if (this._onVisibilityChange) { document.removeEventListener('visibilitychange', this._onVisibilityChange); this._onVisibilityChange = null; }
+        if (this._onGlobalMuteChanged) {
+          this.game.registry.events.off('changedata-globalMuted', this._onGlobalMuteChanged);
+          this._onGlobalMuteChanged = null;
+        }
+
+        // Zdejmij wspólny handler visibility dla tej sceny
+        unbindVisibility('RegisterScene');
+
+        // Usuń wstrzyknięty CSS chowający sidebar/ikonę
+        if (this._hideCssEl && this._hideCssEl.parentNode) {
+          this._hideCssEl.parentNode.removeChild(this._hideCssEl);
+          this._hideCssEl = null;
+        }
 
         this.muteBtn?.destroy(); this.muteBtn = null;
 
