@@ -62,7 +62,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
 
   // ------------- ŁADOWANIE -------------
   preload() {
-    // Tło (ładujemy pod namespaced kluczem, NIC nie usuwamy w preload)
+    // Tło (ładujemy pod namespaced kluczem)
     const bgNs = this._texKey(this._cfg.bgKey);
     if (!this.textures.exists(bgNs)) this.load.image(bgNs, this._cfg.bgSrc);
 
@@ -107,7 +107,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
 
     const { width, height } = this.sys.game.canvas;
 
-    // Tło: używamy namespaced klucza
+    // Tło
     const bg = this.add.image(width / 2, height / 2, this._texKey(this._cfg.bgKey));
     const scale = Math.min(width / bg.width, height / bg.height) * 1.1;
     bg.setScale(scale).setOrigin(0.5, 0.5);
@@ -310,10 +310,10 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       pointer?.event?.stopImmediatePropagation?.();
       pointer?.event?.stopPropagation?.();
 
-      const board = document.getElementById('deduction-board');
-      const notes = document.getElementById('dialog-log');
-      if (board) board.style.display = '';
-      if (notes) notes.style.display = '';
+      const boardEl = document.getElementById('deduction-board');
+      const notesEl = document.getElementById('dialog-log');
+      if (boardEl) boardEl.style.display = '';
+      if (notesEl) notesEl.style.display = '';
       this._clearIntroUi();
       document.body.classList.remove('intro-active');
 
@@ -810,7 +810,11 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       padding:'10px 16px', borderRadius:'10px', border:'1px solid #b983ff',
       background:'#3e0f6f', color:'#fff', cursor:'pointer'
     });
-    close.onclick = () => {
+    close.onclick = async () => {
+      if (result.okAll) {
+        const elapsedMs = Math.max(0, Math.floor((this.time.now - this.startTime)));
+        await this._saveProgress(elapsedMs);
+      }
       wrap.remove();
       if (result.okAll) this.events.emit('level:solved', { scene: this.scene.key });
     };
@@ -825,7 +829,9 @@ export default class BaseInvestigationScene extends Phaser.Scene {
           padding:'10px 16px', borderRadius:'10px', border:'1px solid #7cff8e',
           background:'#0f6f3e', color:'#fff', cursor:'pointer'
         });
-        nextBtn.onclick = () => {
+        nextBtn.onclick = async () => {
+          const elapsedMs = Math.max(0, Math.floor((this.time.now - this.startTime)));
+          await this._saveProgress(elapsedMs);
           wrap.remove();
           this._switchToScene(nextKey);
         };
@@ -839,7 +845,9 @@ export default class BaseInvestigationScene extends Phaser.Scene {
             padding:'10px 16px', borderRadius:'10px', border:'1px solid #b983ff',
             background:'#242424', color:'#fff', cursor:'pointer'
           });
-          backBtn.onclick = () => {
+          backBtn.onclick = async () => {
+            const elapsedMs = Math.max(0, Math.floor((this.time.now - this.startTime)));
+            await this._saveProgress(elapsedMs);
             wrap.remove();
             this._switchToScene('LevelSelect');
           };
@@ -929,19 +937,61 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     });
   }
 
+  // === zapis progresu ===
+  _getUser() {
+    try {
+      const raw = localStorage.getItem('user');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async _postProgress({ userId, levelKey, timeMs, completed }) {
+    try {
+      const res = await fetch('http://localhost:3001/progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, levelKey, timeMs, completed }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json(); // np. { ok:true, bestTimeMs:12345 }
+    } catch (e) {
+      console.warn('Nie udało się zapisać progresu:', e);
+      return null;
+    }
+  }
+
+  async _saveProgress(elapsedMs) {
+    const user = this._getUser();
+    if (!user?.id) return;
+
+    const levelKey = this.scene.key; // np. 'LevelOffice'
+    const payload = await this._postProgress({
+      userId: user.id,
+      levelKey,
+      timeMs: elapsedMs,
+      completed: true,
+    });
+
+    const bestTimeMs = payload?.bestTimeMs ?? null;
+    window.dispatchEvent(new CustomEvent('progressSaved', {
+      detail: { levelKey, timeMs: elapsedMs, bestTimeMs }
+    }));
+  }
+
   shutdown() {
     if (this._onSidebarToggle) { window.removeEventListener('sidebarToggle', this._onSidebarToggle); this._onSidebarToggle = null; }
     if (this._dbKeyHandler)    { document.removeEventListener('keydown', this._dbKeyHandler); this._dbKeyHandler = null; }
     if (this._onResize)        { this.scale.off('resize', this._onResize); this._onResize = null; }
     if (this._onResizeMute)    { this.scale.off('resize', this._onResizeMute); this._onResizeMute = null; }
 
-    // zdejmij nasłuch globalMute
     if (this._onGlobalMuteChanged) {
       this.game.registry.events.off('changedata-globalMuted', this._onGlobalMuteChanged);
       this._onGlobalMuteChanged = null;
     }
 
-    // zdejmij wspólny handler visibility dla tej sceny
+    // zdejmij wspólny handler visibility
     unbindVisibility(this.scene.key);
 
     this._clearIntroUi();
@@ -974,7 +1024,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     if (this.shownDialogs) this.shownDialogs.clear();
     this._dedInputs = null;
 
-    // usuń tylko tekstury tej sceny (po zniszczeniu obiektów)
+    // usuń tylko tekstury tej sceny
     this._removeSceneTextures();
   }
 

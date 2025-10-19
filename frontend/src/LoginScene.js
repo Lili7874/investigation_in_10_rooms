@@ -173,8 +173,15 @@ class LoginScene extends Phaser.Scene {
         if (!res.ok) throw new Error('Błędne dane logowania');
         return res.json();
       })
-      .then(() => {
-        localStorage.setItem('lastLogin', username);
+      .then((payload) => {
+        // >>> ZMIANA: zapisz zalogowanego usera <<<
+        if (payload && payload.user) {
+          localStorage.setItem('user', JSON.stringify(payload.user)); // { id, login, email }
+          localStorage.setItem('lastLogin', payload.user.login || username);
+        } else {
+          localStorage.setItem('lastLogin', username);
+        }
+
         if (loginUI) loginUI.innerHTML = '';
 
         this.video?.stop(); this.video?.destroy();
