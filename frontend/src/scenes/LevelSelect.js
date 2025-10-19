@@ -8,22 +8,101 @@ export default class LevelSelect extends Phaser.Scene {
     super({ key: 'LevelSelect' });
     this._onResizeMute = null;
     this._onGlobalMuteChanged = null;
-  }
-  
-  preload() {
-    // wspólny BGM
-    if (!this.cache.audio.exists('bgm')) {
-      this.load.audio('bgm', 'assets/ambient.mp3');
-    }
-    if (!this.cache.audio.exists('click')) {
-      this.load.audio('click', 'assets/click.mp3');
-    }
+
+    this._rowsByNum = new Map();     // num -> { bg, label, hit, lock, check }
+    this._completedNums = new Set(); // zbiór zaliczonych numerów
+    this._unlockedNums  = new Set(); // zbiór odblokowanych numerów
+    this._progressListener = null;
   }
 
-  create() {
+  preload() {
+    if (!this.cache.audio.exists('bgm'))   this.load.audio('bgm', 'assets/ambient.mp3');
+    if (!this.cache.audio.exists('click')) this.load.audio('click', 'assets/click.mp3');
+    if (!this.cache.audio.exists('error')) this.load.audio('error', 'assets/error.mp3');
+  }
+
+  // ——— helpers ———
+  _getUser() {
+    try { const raw = localStorage.getItem('user'); return raw ? JSON.parse(raw) : null; }
+    catch { return null; }
+  }
+  async _fetchProgress(userId) {
+    try {
+      const res = await fetch(`http://localhost:3001/progress/${userId}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json(); // { ok, progress: [{ levelKey, completed, ...}, ...] }
+      return data?.progress || [];
+    } catch (e) {
+      console.warn('Nie mogę pobrać progresu:', e.message || e);
+      return [];
+    }
+  }
+  _numFromKey(levelKey) {
+    // LEVEL_KEYS: { 1:'LevelOffice', 2:'LevelRestaurant', ... }
+    const entries = Object.entries(LEVEL_KEYS);
+    const found = entries.find(([n, k]) => k === levelKey);
+    return found ? Number(found[0]) : null;
+  }
+  _computeUnlocked() {
+    // zasada: 1 zawsze odblokowany; n>1 odblokowany, jeśli (n-1) jest completed
+    const nums = [...this._rowsByNum.keys()].sort((a,b)=>a-b);
+    const unlocked = new Set();
+    nums.forEach(n => {
+      if (n === 1) unlocked.add(1);
+      else if (this._completedNums.has(n - 1)) unlocked.add(n);
+    });
+    this._unlockedNums = unlocked;
+  }
+  _applyVisualState() {
+    // odśwież wygląd i interaktywność wierszy
+    this._rowsByNum.forEach((row, n) => {
+      const isCompleted = this._completedNums.has(n);
+      const isUnlocked  = this._unlockedNums.has(n);
+
+      // wygląd
+      const baseAlpha = isUnlocked ? 1 : 0.45;
+      row.bg.setFillStyle(0xffffff, isUnlocked ? 0.10 : 0.06);
+      row.bg.setAlpha(baseAlpha);
+      row.label.setAlpha(baseAlpha);
+
+      // ikonki
+      row.lock.setVisible(!isUnlocked);
+      row.check.setVisible(isCompleted);
+
+      // interaktywność
+      row.hit.removeAllListeners();
+      if (isUnlocked) {
+        row.hit.setInteractive({ cursor: 'pointer' });
+        row.hit.on('pointerover', () => row.bg.setFillStyle(0xffffff, 0.12));
+        row.hit.on('pointerout',  () => row.bg.setFillStyle(0xffffff, 0.10));
+        row.hit.on('pointerdown', () => this._startLevel(n));
+      } else {
+        row.hit.setInteractive({ cursor: 'not-allowed' });
+        row.hit.on('pointerdown', () => {
+          try { this.sound.play('error', { volume: 0.8 }); } catch (_) {}
+          // drobny „shake” blokady
+          this.tweens.add({
+            targets: [row.lock],
+            x: { from: row.lock.x - 3, to: row.lock.x + 3 },
+            duration: 40, yoyo: true, repeat: 3, onComplete: () => { row.lock.x = row.lock.x; }
+          });
+        });
+      }
+    });
+  }
+  _startLevel(n) {
+    try { this.sound.play('click', { volume: 0.8, detune: 50 }); } catch (_) {}
+    const key = LEVEL_KEYS[n];
+    if (!key) return;
+    this.game.registry.set('currentLevelKey', key);
+    this.scene.start(key);
+    this.scene.stop('LevelSelect');
+  }
+
+  async create() {
     window.dispatchEvent(new CustomEvent('sceneChange', { detail: 'LevelSelect' }));
 
-    // kolejność poziomów
+    // kolejność poziomów (taką samą ustaw i w Sidebar/LEVEL_KEYS)
     const levelOrder = [
       'LevelOffice','LevelRestaurant','LevelLibrary','LevelTrainstation',
       'LevelTheater','LevelMuseum','LevelVillageHouse','LevelHospital','LevelCasino'
@@ -41,7 +120,7 @@ export default class LevelSelect extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // panel-lista
-    const containerW = 420;
+    const containerW = 460;
     const containerH = Math.min(520, height - 180);
     const cx = width/2, cy = height/2 + 20;
 
@@ -54,7 +133,7 @@ export default class LevelSelect extends Phaser.Scene {
     const scrollArea = this.add.container(cx - containerW/2 + 16, cy - containerH/2 + 16);
     const rowH = 44, gap = 10;
 
-    // wiersze „Poziom X”
+    // zbuduj wiersze
     const entries = Object.keys(LEVEL_KEYS).map(n => Number(n)).sort((a,b)=>a-b);
 
     entries.forEach((n, i) => {
@@ -62,27 +141,26 @@ export default class LevelSelect extends Phaser.Scene {
 
       const bg = this.add.rectangle(0, y, containerW - 32, rowH, 0xffffff, 0.06)
         .setOrigin(0,0).setStrokeStyle(1, 0xb983ff, 0.6);
-      const label = this.add.text(12, y + 10, `Poziom ${n}`, {
+
+      const label = this.add.text(14, y + 10, `Poziom ${n}`, {
         fontFamily: 'Monaco, monospace', fontSize: '18px', color: '#FFFFFF'
       }).setOrigin(0,0);
 
-      const hit = this.add.rectangle((containerW-32)/2, y + rowH/2, containerW - 32, rowH, 0x000000, 0)
-        .setInteractive({ cursor: 'pointer' });
+      // ikonki po prawej: lock i check
+      const lock = this.add.text(containerW - 32 - 26, y + 9, '🔒', {
+        fontFamily: 'Monaco, monospace', fontSize: '18px', color: '#FFFFFF'
+      }).setOrigin(0,0).setAlpha(0.9);
 
-      hit.on('pointerover', () => { bg.setFillStyle(0xffffff, 0.10); });
-      hit.on('pointerout',  () => { bg.setFillStyle(0xffffff, 0.06); });
-      hit.on('pointerdown', () => {
-        try { this.sound.play('click', { volume: 0.8, detune: 50 }); } catch (_) {}
-        const key = LEVEL_KEYS[n];
-        if (key) {
-          this.game.registry.set('currentLevelKey', key);
-          this.scene.start(key);
-          // zatrzymaj LevelSelect, żeby SHUTDOWN posprzątał (np. listenery)
-          this.scene.stop('LevelSelect');
-        }
-      });
+      const check = this.add.text(containerW - 32 - 26, y + 9, '✅', {
+        fontFamily: 'Monaco, monospace', fontSize: '18px', color: '#32cd32'
+      }).setOrigin(0,0).setVisible(false);
 
-      scrollArea.add([bg, label, hit]);
+      const hit = this.add.rectangle((containerW-32)/2, y + rowH/2, containerW - 32, rowH, 0x000000, 0);
+      hit.setOrigin(0.5, 0.5);
+
+      scrollArea.add([bg, label, lock, check, hit]);
+
+      this._rowsByNum.set(n, { bg, label, hit, lock, check });
     });
 
     // wyloguj
@@ -100,20 +178,16 @@ export default class LevelSelect extends Phaser.Scene {
       this.scene.stop('LevelSelect');
     });
 
-    // === AUDIO ===
-    // odblokuj AudioContext po 1. interakcji (bezpiecznie)
+    // === AUDIO / Visibility ===
     this.input.once('pointerdown', () => safeResume(this));
-    // zdeduplikowana obsługa visibility (bez własnych listenerów)
     bindVisibility(this, 'LevelSelect');
 
-    // globalny BGM (singleton)
     if (!this.game.__bgm) {
       this.game.__bgm = this.sound.add('bgm', { loop: true, volume: 0.5 });
       this.game.__bgm.play();
     }
-    this.bgm = this.game.__bgm; // nie pauzujemy/nie wznawiamy lokalnie
+    this.bgm = this.game.__bgm;
 
-    // globalny mute z registry / localStorage
     const reg = this.game.registry;
     let gm = reg.get('globalMuted');
     if (gm == null) {
@@ -144,14 +218,12 @@ export default class LevelSelect extends Phaser.Scene {
       this.muteBtn.setText(newMuted ? '🔇' : '🔊');
     });
 
-    // nasłuch zmian globalMuted z innych scen
     this._onGlobalMuteChanged = (_parent, value) => {
       this.sound.mute = !!value;
       this.muteBtn?.setText(this.sound.mute ? '🔇' : '🔊');
     };
     reg.events.on('changedata-globalMuted', this._onGlobalMuteChanged);
 
-    // reposition mute button on resize
     this._onResizeMute = (gameSize) => {
       this.muteBtn?.setPosition(gameSize.width - btnSize - pad, gameSize.height - btnSize - pad);
     };
@@ -162,16 +234,54 @@ export default class LevelSelect extends Phaser.Scene {
     const maxScroll = Math.max(0, totalH - (containerH - 32));
     let scrollY = 0;
     const applyScroll = () => {
-      scrollY = Phaser.Math.Clamp(scrollY, 0, maxScroll);
-      scrollArea.y = cy - containerH/2 + 16 - scrollY;
+      const baseY = cy - containerH/2 + 16;
+      const clamped = Phaser.Math.Clamp(scrollY, 0, maxScroll);
+      scrollArea.y = baseY - clamped;
     };
     this.input.on('wheel', (_p, _o, dx, dy) => {
-      scrollY += (Math.abs(dy) > Math.abs(dx) ? dy : 0);
-      applyScroll();
+      if (Math.abs(dy) > Math.abs(dx)) {
+        scrollY += dy;
+        applyScroll();
+      }
     });
+
+    // === pobierz progres i ustaw stan odblokowania ===
+    const user = this._getUser();
+    if (user?.id) {
+      const progress = await this._fetchProgress(user.id);
+      // uzupełnij _completedNums
+      this._completedNums.clear();
+      for (const row of progress) {
+        if (row.completed && row.levelKey) {
+          const num = this._numFromKey(row.levelKey);
+          if (num != null) this._completedNums.add(num);
+        }
+      }
+    } else {
+      this._completedNums.clear(); // brak usera = brak progresu
+    }
+
+    // policz odblokowane i odśwież wygląd
+    this._computeUnlocked();
+    this._applyVisualState();
+
+    // aktualizuj po zapisie progresu z poziomu
+    this._progressListener = (e) => {
+      const levelKey = e?.detail?.levelKey;
+      if (!levelKey) return;
+      const num = this._numFromKey(levelKey);
+      if (num != null) this._completedNums.add(num);
+      this._computeUnlocked();
+      this._applyVisualState();
+    };
+    window.addEventListener('progressSaved', this._progressListener);
 
     // sprzątanie
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      if (this._progressListener) {
+        window.removeEventListener('progressSaved', this._progressListener);
+        this._progressListener = null;
+      }
       if (this._onResizeMute) {
         this.scale.off('resize', this._onResizeMute);
         this._onResizeMute = null;
@@ -180,12 +290,12 @@ export default class LevelSelect extends Phaser.Scene {
         this.game.registry.events.off('changedata-globalMuted', this._onGlobalMuteChanged);
         this._onGlobalMuteChanged = null;
       }
-
-      // zdejmij wspólny handler visibility dla tej sceny
       unbindVisibility('LevelSelect');
-
       this.muteBtn?.destroy();
       this.muteBtn = null;
+      this._rowsByNum.clear();
+      this._completedNums.clear();
+      this._unlockedNums.clear();
     });
   }
 }

@@ -11,6 +11,13 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     this.startTime = 0;
     this.timerText = null;
 
+    // NEW: rekord z bazy
+    this.bestTimeMs = null;
+    this.bestHud = null;
+    this.bestBg = null;
+    this.bestIcon = null;
+    this.bestText = null;
+
     this.characters = [];
     this.characterPositions = [];
 
@@ -98,7 +105,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
   }
 
   // ------------- START SCENY -------------
-  create() {
+  async create() {
     this._enforceSingleActiveScene();
     this._purgeOrphanedUi();
     this._wireShutdownHooks();
@@ -134,7 +141,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     this.createDeductionBoard(this._dedLists);
     this.createIntroOverlay(this._cfg.title || 'Scena', this._cfg.intro || '');
 
-    this.buildTimerHud();
+    this.buildTimerHud();  // ⟵ tworzy też „Rekord”
     this.tweens.add({ targets: this.timerBg, alpha: { from: 0.9, to: 0.6 }, duration: 1600, yoyo: true, repeat: -1 });
 
     this._onResize = () => this.layoutTimer();
@@ -204,11 +211,17 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       this.muteBtn?.setPosition(gameSize.width - btnSize - pad, gameSize.height - btnSize - pad);
     };
     this.scale.on('resize', this._onResizeMute);
+
+    // ⟵ pobierz rekord z bazy (jeśli użytkownik zalogowany)
+    await this._loadBestTime();
+    this.layoutTimer();
   }
 
-  // ------------- TIMER -------------
+  // ------------- TIMER + REKORD -------------
   buildTimerHud() {
     this.startTime = this.time.now;
+
+    // Licznik czasu (jak wcześniej)
     this.timerHud = this.add.container(0, 0).setDepth(1000).setScrollFactor(0);
     this.timerBg = this.add.graphics();
     this.timerIcon = this.add.text(0, 0, '⏱', { fontFamily: 'Monaco, monospace', fontSize: '22px', color: '#FFFFFF' });
@@ -217,31 +230,75 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     this.timerHud.add(this.timerBg);
     this.timerHud.add(this.timerIcon);
     this.timerHud.add(this.timerText);
+
+    // NOWE: „Rekord” (najlepszy czas z bazy)
+    this.bestHud = this.add.container(0, 0).setDepth(1000).setScrollFactor(0);
+    this.bestBg = this.add.graphics();
+    this.bestIcon = this.add.text(0, 0, '🏆', { fontFamily: 'Monaco, monospace', fontSize: '22px', color: '#FFFFFF' });
+    this.bestText = this.add.text(0, 0, 'Rekord: --:--', { fontFamily: 'Monaco, monospace', fontSize: '22px', color: '#FFFFFF' })
+      .setShadow(0, 0, '#b983ff', 12, true, true);
+    this.bestHud.add(this.bestBg);
+    this.bestHud.add(this.bestIcon);
+    this.bestHud.add(this.bestText);
+  }
+
+  _formatMs(ms) {
+    if (!Number.isFinite(ms) || ms < 0) return '--:--';
+    const totalSec = Math.floor(ms / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
   }
 
   layoutTimer() {
     const { width: sw } = this.scale;
     const margin = 20, padX = 14, padY = 8, gap = 8, radius = 14;
+    const between = 10; // odstęp między „Rekord” i „Czas”
+
+    // — timer —
     this.timerIcon.setPosition(0, 0);
     this.timerText.setPosition(this.timerIcon.width + gap, 0);
 
-    const innerW = this.timerIcon.width + gap + this.timerText.width;
-    const innerH = Math.max(this.timerIcon.height, this.timerText.height);
-    const bgW = innerW + padX * 2, bgH = innerH + padY * 2;
+    const tInnerW = this.timerIcon.width + gap + this.timerText.width;
+    const tInnerH = Math.max(this.timerIcon.height, this.timerText.height);
+    const tBgW = tInnerW + padX * 2, tBgH = tInnerH + padY * 2;
 
     this.timerBg.clear();
     this.timerBg.fillStyle(0x000000, 0.55);
     this.timerBg.lineStyle(2, 0x8e4dff, 0.9);
-    this.timerBg.fillRoundedRect(0, 0, bgW, bgH, radius);
-    this.timerBg.strokeRoundedRect(0, 0, bgW, bgH, radius);
+    this.timerBg.fillRoundedRect(0, 0, tBgW, tBgH, radius);
+    this.timerBg.strokeRoundedRect(0, 0, tBgW, tBgH, radius);
 
     this.timerIcon.x = padX;
-    this.timerIcon.y = padY + (bgH - 2 * padY - this.timerIcon.height) / 2;
+    this.timerIcon.y = padY + (tBgH - 2 * padY - this.timerIcon.height) / 2;
     this.timerText.x = this.timerIcon.x + this.timerIcon.width + gap;
-    this.timerText.y = padY + (bgH - 2 * padY - this.timerText.height) / 2;
+    this.timerText.y = padY + (tBgH - 2 * padY - this.timerText.height) / 2;
 
-    this.timerHud.x = sw - margin - bgW;
+    // — best —
+    this.bestIcon.setPosition(0, 0);
+    this.bestText.setPosition(this.bestIcon.width + gap, 0);
+
+    const bInnerW = this.bestIcon.width + gap + this.bestText.width;
+    const bInnerH = Math.max(this.bestIcon.height, this.bestText.height);
+    const bBgW = bInnerW + padX * 2, bBgH = bInnerH + padY * 2;
+
+    this.bestBg.clear();
+    this.bestBg.fillStyle(0x000000, 0.55);
+    this.bestBg.lineStyle(2, 0x8e4dff, 0.9);
+    this.bestBg.fillRoundedRect(0, 0, bBgW, bBgH, radius);
+    this.bestBg.strokeRoundedRect(0, 0, bBgW, bBgH, radius);
+
+    this.bestIcon.x = padX;
+    this.bestIcon.y = padY + (bBgH - 2 * padY - this.bestIcon.height) / 2;
+    this.bestText.x = this.bestIcon.x + this.bestIcon.width + gap;
+    this.bestText.y = padY + (bBgH - 2 * padY - this.bestText.height) / 2;
+
+    // Pozycjonowanie w prawym górnym rogu: [ REKORD ][ odstęp ][ CZAS ]
+    this.timerHud.x = sw - margin - tBgW;
     this.timerHud.y = margin;
+
+    this.bestHud.x = this.timerHud.x - between - bBgW;
+    this.bestHud.y = margin;
   }
 
   update() {
@@ -937,7 +994,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     });
   }
 
-  // === zapis progresu ===
+  // === zapis/pobranie progresu ===
   _getUser() {
     try {
       const raw = localStorage.getItem('user');
@@ -962,6 +1019,28 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     }
   }
 
+  async _loadBestTime() {
+    const user = this._getUser();
+    if (!user?.id) {
+      this.bestTimeMs = null;
+      this.bestText?.setText('Rekord: --:--');
+      return;
+    }
+    try {
+      const res = await fetch(`http://localhost:3001/progress/${user.id}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const levelKey = this.scene.key;
+      const row = (data?.progress || []).find(r => r.levelKey === levelKey);
+      this.bestTimeMs = row?.bestTimeMs ?? null;
+      this.bestText?.setText(`Rekord: ${this._formatMs(this.bestTimeMs)}`);
+    } catch (e) {
+      console.warn('Nie udało się pobrać rekordu:', e);
+      this.bestTimeMs = null;
+      this.bestText?.setText('Rekord: --:--');
+    }
+  }
+
   async _saveProgress(elapsedMs) {
     const user = this._getUser();
     if (!user?.id) return;
@@ -975,6 +1054,12 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     });
 
     const bestTimeMs = payload?.bestTimeMs ?? null;
+    if (bestTimeMs != null) {
+      this.bestTimeMs = bestTimeMs;
+      this.bestText?.setText(`Rekord: ${this._formatMs(bestTimeMs)}`);
+      this.layoutTimer();
+    }
+
     window.dispatchEvent(new CustomEvent('progressSaved', {
       detail: { levelKey, timeMs: elapsedMs, bestTimeMs }
     }));
@@ -1002,7 +1087,9 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     if (this.time)   this.time.removeAllEvents();
 
     if (this.timerHud) { this.timerHud.destroy(true); this.timerHud = null; }
+    if (this.bestHud)  { this.bestHud.destroy(true);  this.bestHud  = null; }
     this.timerBg = null; this.timerIcon = null; this.timerText = null;
+    this.bestBg  = null; this.bestIcon  = null; this.bestText  = null;
 
     ['deduction-board', 'dialog-log', 'deduction-result'].forEach(id => {
       const el = document.getElementById(id);
