@@ -12,7 +12,9 @@ import LevelLibrary from './scenes/LevelLibrary';
 import LevelTrainstation from './scenes/LevelTrainstation';
 import LevelRestaurant from './scenes/LevelRestaurant';
 import LevelSelect from './scenes/LevelSelect';
+import ForgotPasswordScene from './ForgotPasswordScene';
 import Sidebar from './Sidebar';
+import ResetPasswordScene from './ResetPasswordScene';
 
 const App = () => {
   const gameRef = useRef(null);
@@ -27,7 +29,7 @@ const App = () => {
         height: window.innerHeight,
         parent: 'game-container',
         transparent: true,
-        scene: [LoginScene, RegisterScene, LevelSelect, LevelOffice, LevelRestaurant, LevelLibrary, LevelTrainstation, LevelTheater, LevelMuseum, LevelVillageHouse, LevelHospital, LevelCasino /*, kolejne level-e */],
+        scene: [LoginScene, RegisterScene, LevelSelect, ForgotPasswordScene, ResetPasswordScene, LevelOffice, LevelRestaurant, LevelLibrary, LevelTrainstation, LevelTheater, LevelMuseum, LevelVillageHouse, LevelHospital, LevelCasino /*, kolejne level-e */],
       });
 	const onLevelSelect = (e) => {
 		const key = e.detail?.key;

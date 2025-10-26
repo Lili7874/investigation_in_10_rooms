@@ -822,6 +822,125 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     try { mgr.start(key); } catch (e) { console.warn('Nie mogę uruchomić sceny:', key, e); }
   }
 
+  // === LEADERBOARD: helper ===
+  _getUser() {
+    try {
+      const raw = localStorage.getItem('user');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  // --- NEW: bezpieczny fetch JSON z timeoutem + fallback ścieżki
+  async _fetchLeaderboardJSON(levelKey, timeoutMs = 6000) {
+    const ctr = new AbortController();
+    const t = setTimeout(() => ctr.abort('timeout'), timeoutMs);
+
+    const tryOnce = async (url) => {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: ctr.signal,
+        mode: 'cors',
+      });
+      const contentType = res.headers.get('content-type') || '';
+      let body;
+      try {
+        body = contentType.includes('application/json')
+          ? await res.json()
+          : await res.text();
+      } catch {
+        body = null;
+      }
+      return { ok: res.ok, status: res.status, body, url, contentType };
+    };
+
+    try {
+      const url1 = `http://localhost:3001/leaderboard/${encodeURIComponent(levelKey)}`;
+      let r = await tryOnce(url1);
+      if (r.ok && r.body && r.body.ok) {
+        clearTimeout(t);
+        return r.body;
+      }
+
+      const url2 = `http://localhost:3001/leaderboard?levelKey=${encodeURIComponent(levelKey)}`;
+      let r2 = await tryOnce(url2);
+      if (r2.ok && r2.body && r2.body.ok) {
+        clearTimeout(t);
+        return r2.body;
+      }
+
+      console.warn('[LB] oba wywołania nieudane', { first: r, second: r2 });
+      clearTimeout(t);
+      throw new Error(
+        `Leaderboard fetch failed (${r.status} via :param, ${r2.status} via ?query)`
+      );
+    } catch (e) {
+      clearTimeout(t);
+      throw e;
+    }
+  }
+
+  // --- zmodyfikowane: wczytanie i render rankingu z fallbackiem
+  async _loadLeaderboardInto(targetEl) {
+    if (!targetEl) return;
+    const user = this._getUser?.();
+    const me = user?.login || null;
+    const levelKey = this.scene.key;
+
+    targetEl.innerHTML = `<div style="opacity:.8;font-size:12px">Ładowanie rankingu…</div>`;
+
+    try {
+      const data = await this._fetchLeaderboardJSON(levelKey);
+      const rows = Array.isArray(data?.leaderboard) ? data.leaderboard : [];
+
+      if (!rows.length) {
+        targetEl.innerHTML = `<div style="opacity:.8;font-size:12px">Brak wpisów – bądź pierwszy!</div>`;
+        return;
+      }
+
+      const table = document.createElement('table');
+      table.style.width = '100%';
+      table.style.borderCollapse = 'separate';
+      table.style.borderSpacing = '0 6px';
+      const tbody = document.createElement('tbody');
+
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        const isMe = me && r.login === me;
+        tr.style.background = 'rgba(255,255,255,0.05)';
+        tr.style.border = '1px solid rgba(185,131,255,0.25)';
+        tr.style.borderRadius = '8px';
+        tr.style.boxShadow = 'inset 0 0 6px rgba(185,131,255,0.25)';
+        if (isMe) tr.style.outline = '1px solid #7cff8e';
+
+        const tdRank  = document.createElement('td');
+        const tdLogin = document.createElement('td');
+        const tdTime  = document.createElement('td');
+        [tdRank, tdLogin, tdTime].forEach(td => {
+          td.style.padding = '8px 10px';
+          td.style.fontSize = '14px';
+        });
+        tdRank.style.width = '48px';
+        tdRank.textContent = `#${r.rank ?? ''}`;
+        tdLogin.textContent = r.login ?? '—';
+        tdTime.style.textAlign = 'right';
+        tdTime.textContent = this._formatMs(Number(r.bestTimeMs));
+
+        tr.appendChild(tdRank); tr.appendChild(tdLogin); tr.appendChild(tdTime);
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      targetEl.innerHTML = '';
+      targetEl.appendChild(table);
+    } catch (e) {
+      console.warn('Leaderboard error:', e);
+      targetEl.innerHTML = `<div style="opacity:.8;font-size:12px">Błąd pobierania rankingu</div>`;
+    }
+  }
+
   _showDeductionResult(result, ans) {
     const old = document.getElementById('deduction-result');
     if (old) old.remove();
@@ -835,7 +954,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
 
     const panel = document.createElement('div');
     Object.assign(panel.style, {
-      width:'min(560px, 92vw)', background:'#140024', color:'#fff',
+      width:'min(680px, 96vw)', background:'#140024', color:'#fff',
       border:'1px solid #8e4dff', borderRadius:'14px', padding:'18px 20px',
       fontFamily:'Monaco, monospace', boxShadow:'0 10px 30px rgba(0,0,0,.35)'
     });
@@ -856,10 +975,47 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     rows.appendChild(mkRow('Przedmiot',  result.details.item,    ans.item));
     rows.appendChild(mkRow('Miejsce',    result.details.place,   ans.place));
 
+    // === RANKING (Top 5) — tylko po poprawnym ukończeniu ===
+    let leaderboardBox = null;
+    let onSaved = null;
+    if (result.okAll) {
+      const lbWrap = document.createElement('div');
+      lbWrap.style.marginTop = '12px';
+      const lbTitle = document.createElement('div');
+      lbTitle.textContent = '🏆 Ranking (Top 5)';
+      lbTitle.style.fontSize = '16px';
+      lbTitle.style.marginBottom = '6px';
+      lbTitle.style.textShadow = '0 0 8px #b983ff';
+
+      leaderboardBox = document.createElement('div');
+      leaderboardBox.style.border = '1px solid rgba(185,131,255,0.35)';
+      leaderboardBox.style.borderRadius = '10px';
+      leaderboardBox.style.padding = '8px';
+      leaderboardBox.style.background = 'rgba(255,255,255,0.04)';
+
+      lbWrap.appendChild(lbTitle);
+      lbWrap.appendChild(leaderboardBox);
+      panel.appendChild(lbWrap);
+
+      // Załaduj ranking teraz…
+      this._loadLeaderboardInto(leaderboardBox);
+      // …i odśwież po zapisie progresu (gdy byłeś lepszy)
+      onSaved = (e) => {
+        if (e?.detail?.levelKey === this.scene.key) this._loadLeaderboardInto(leaderboardBox);
+      };
+      window.addEventListener('progressSaved', onSaved);
+    }
+
     const btns = document.createElement('div');
     btns.style.marginTop = '16px';
     btns.style.display = 'flex';
     btns.style.gap = '10px';
+    btns.style.flexWrap = 'wrap';
+
+    const cleanUpModal = () => {
+      if (onSaved) window.removeEventListener('progressSaved', onSaved);
+      wrap.remove();
+    };
 
     const close = document.createElement('button');
     close.textContent = result.okAll ? 'OK' : 'Spróbuj ponownie';
@@ -872,7 +1028,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
         const elapsedMs = Math.max(0, Math.floor((this.time.now - this.startTime)));
         await this._saveProgress(elapsedMs);
       }
-      wrap.remove();
+      cleanUpModal();
       if (result.okAll) this.events.emit('level:solved', { scene: this.scene.key });
     };
     btns.appendChild(close);
@@ -889,7 +1045,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
         nextBtn.onclick = async () => {
           const elapsedMs = Math.max(0, Math.floor((this.time.now - this.startTime)));
           await this._saveProgress(elapsedMs);
-          wrap.remove();
+          cleanUpModal();
           this._switchToScene(nextKey);
         };
         btns.appendChild(nextBtn);
@@ -905,7 +1061,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
           backBtn.onclick = async () => {
             const elapsedMs = Math.max(0, Math.floor((this.time.now - this.startTime)));
             await this._saveProgress(elapsedMs);
-            wrap.remove();
+            cleanUpModal();
             this._switchToScene('LevelSelect');
           };
           btns.appendChild(backBtn);
@@ -995,15 +1151,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
   }
 
   // === zapis/pobranie progresu ===
-  _getUser() {
-    try {
-      const raw = localStorage.getItem('user');
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  }
-
   async _postProgress({ userId, levelKey, timeMs, completed }) {
     try {
       const res = await fetch('http://localhost:3001/progress', {
@@ -1012,7 +1159,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
         body: JSON.stringify({ userId, levelKey, timeMs, completed }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json(); // np. { ok:true, bestTimeMs:12345 }
+      return await res.json();
     } catch (e) {
       console.warn('Nie udało się zapisać progresu:', e);
       return null;
@@ -1045,7 +1192,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     const user = this._getUser();
     if (!user?.id) return;
 
-    const levelKey = this.scene.key; // np. 'LevelOffice'
+    const levelKey = this.scene.key;
     const payload = await this._postProgress({
       userId: user.id,
       levelKey,

@@ -136,6 +136,17 @@ class LoginScene extends Phaser.Scene {
     const spinner = document.createElement('div');
     spinner.className = 'spinner hidden';
 
+    // ⬇️ NOWE: link „Zapomniałeś hasła?”
+    const forgotToggle = document.createElement('div');
+    forgotToggle.className = 'register-toggle-text';
+    forgotToggle.innerText = 'Zapomniałeś hasła?';
+    forgotToggle.style.marginTop = '8px';
+    forgotToggle.onclick = () => {
+      try { if (loginUI) loginUI.innerHTML = ''; } catch (_) {}
+      this.scene.start('ForgotPasswordScene');
+      this.scene.stop('LoginScene');
+    };
+
     const registerToggle = document.createElement('div');
     registerToggle.className = 'register-toggle-text';
     registerToggle.innerText = 'Nie masz konta? Zarejestruj się';
@@ -174,7 +185,7 @@ class LoginScene extends Phaser.Scene {
         return res.json();
       })
       .then((payload) => {
-        // >>> ZMIANA: zapisz zalogowanego usera <<<
+        // zapisz zalogowanego usera
         if (payload && payload.user) {
           localStorage.setItem('user', JSON.stringify(payload.user)); // { id, login, email }
           localStorage.setItem('lastLogin', payload.user.login || username);
@@ -186,7 +197,7 @@ class LoginScene extends Phaser.Scene {
 
         this.video?.stop(); this.video?.destroy();
 
-        // wyłącz ambient z loginu (nie ruszamy globalnego __bgm)
+        // wyłącz ambient z loginu
         if (this.ambient) { this.ambient.stop(); this.ambient.destroy(); this.ambient = null; }
         this.sound.removeByKey && this.sound.removeByKey('ambient');
 
@@ -209,7 +220,17 @@ class LoginScene extends Phaser.Scene {
 
     const formContainer = document.createElement('div');
     formContainer.className = 'form-container';
-    formContainer.append(title, loginInput, passWrapper, errorMsg, loginBtn, spinner, registerToggle);
+    // Dodajemy forgotToggle tuż nad linkiem do rejestracji:
+    formContainer.append(
+      title,
+      loginInput,
+      passWrapper,
+      errorMsg,
+      loginBtn,
+      spinner,
+      forgotToggle,      // ⬅️ nowy link
+      registerToggle
+    );
     if (loginUI) loginUI.appendChild(formContainer);
 
     // sprzątanie
