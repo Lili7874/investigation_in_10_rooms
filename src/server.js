@@ -2,7 +2,7 @@
 require('dotenv/config');
 
 const express = require('express');
-const mysql = require('mysql2');
+const mysql = require('mysql2'); // zostajemy przy callback API; można podmienić na mysql2/promise
 const bcrypt = require('bcrypt');
 const cors = require('cors');
 const crypto = require('crypto');
@@ -12,58 +12,98 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '1mb' }));
 
-// ---------- CORS ----------
-const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:5173';
+/* =========================
+   CORS
+   ========================= */
+// ★ Podaj tu swoją domenę Netlify (dokładnie!)
+const DEFAULT_ALLOWED = [
+  'http://localhost:5173',
+  process.env.FRONTEND_BASE_URL, // np. https://twoja-nazwa.netlify.app
+].filter(Boolean);
+
 const ALLOWED_ORIGINS = String(process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
+
+const WHITELIST = new Set([...DEFAULT_ALLOWED, ...ALLOWED_ORIGINS]);
 
 const isLocalhost = (origin) =>
   /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin || '');
 
 const corsOptions = {
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // np. curl/Postman
+    if (!origin) return cb(null, true);           // curl/Postman/brak Origin
     if (isLocalhost(origin)) return cb(null, true);
-    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    if (WHITELIST.has(origin)) return cb(null, true);
+    console.warn('CORS blocked for origin:', origin); // ★ szybki debug
     cb(new Error(`CORS blocked for origin: ${origin}`));
   },
   methods: ['GET', 'POST', 'OPTIONS'],
-  credentials: false,
+  credentials: false, // w razie cookies -> true i ustaw nagłówki w froncie
 };
 app.use(cors(corsOptions));
 app.use((req, res, next) => (req.method === 'OPTIONS' ? res.sendStatus(204) : next()));
 
-// ---------- Health ----------
-app.get('/health', (_req, res) => res.json({ ok: true }));
+/* =========================
+   Health
+   ========================= */
+app.get('/healthz', (_req, res) => res.json({ ok: true })); // ★ konwencja /healthz
 
-// ---------- DB ----------
-const db = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  port: Number(process.env.DB_PORT || 3306), // <-- ważne dla Railway (public proxy)
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASS || '',
-  database: process.env.DB_NAME || 'sledztwo_w_10_pokojach',
+/* =========================
+   DB (Railway MySQL)
+   =========================
+   — Public connection wymaga SSL (self-signed).
+   — Jeśli używasz Internal connection w tym samym projekcie Railway,
+     możesz wyłączyć SSL (DB_SSL=off).
+*/
+const DB_SSL = String(process.env.DB_SSL || 'require').toLowerCase(); // 'require' | 'off'
+
+// ★ Wspieraj zarówno pełny URL (DATABASE_URL), jak i osobne zmienne host/user/...
+const basePoolConfig = {
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
   dateStrings: true,
-});
+};
 
-app.get('/health/db', (_req, res) => {
-  db.query('SELECT 1 AS ok', (err) =>
-    err ? res.status(500).json({ ok: false, error: 'DB_DOWN' }) : res.json({ ok: true })
+if (process.env.DATABASE_URL) {
+  // mysql2 akceptuje "uri" w configu lub sam string jako 1. argument createPool
+  basePoolConfig.uri = process.env.DATABASE_URL;
+} else {
+  basePoolConfig.host = process.env.DB_HOST || 'localhost';
+  basePoolConfig.port = Number(process.env.DB_PORT || 3306);
+  basePoolConfig.user = process.env.DB_USER || 'root';
+  basePoolConfig.password = process.env.DB_PASS || '';
+  basePoolConfig.database = process.env.DB_NAME || 'sledztwo_w_10_pokojach';
+}
+
+// ★ SSL dla publicznego połączenia Railway
+if (DB_SSL !== 'off') {
+  basePoolConfig.ssl = { rejectUnauthorized: false, minVersion: 'TLSv1.2' };
+}
+
+const db = mysql.createPool(basePoolConfig);
+
+// test DB w /healthz/db
+app.get('/healthz/db', (_req, res) => {
+  db.query('SELECT 1 AS ok', (err, rows) =>
+    err
+      ? res.status(500).json({ ok: false, error: 'DB_DOWN', detail: err.code })
+      : res.json({ ok: true, db: rows?.[0]?.ok === 1 })
   );
 });
 
-// ---------- Mailer ----------
+/* =========================
+   Mailer
+   ========================= */
 const RESET_TOKEN_TTL_MIN = Number(process.env.RESET_TOKEN_TTL_MIN || 30);
 const SMTP_HOST = process.env.SMTP_HOST || '';
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_USER = process.env.SMTP_USER || '';
 const SMTP_PASS = process.env.SMTP_PASS || '';
 const SMTP_FROM = process.env.SMTP_FROM || 'no-reply@example.com';
+const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:5173';
 
 let transporter = null;
 async function getTransporter() {
@@ -87,11 +127,13 @@ async function getTransporter() {
     secure: testAccount.smtp.secure,
     auth: { user: testAccount.user, pass: testAccount.pass },
   });
-  console.log('📨 Mailer: tryb DEV (Ethereal) — w konsoli pojawi się link „preview”.');
+    console.log('📨 Mailer: tryb DEV (Ethereal) — w konsoli pojawi się link „preview”.');
   return transporter;
 }
 
-// ---------- Schema ----------
+/* =========================
+   Schema (auto-migracje)
+   ========================= */
 db.query('SELECT 1', (err) => {
   if (err) {
     console.error('❌ MySQL connection error:', err);
@@ -142,7 +184,9 @@ db.query('SELECT 1', (err) => {
   });
 });
 
-// ---------- Helpers ----------
+/* =========================
+   Helpers
+   ========================= */
 const sanitize = (s) => (typeof s === 'string' ? s.trim() : '');
 const basicEmailOk = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -181,7 +225,9 @@ const toMySQLDateTime = (d) => {
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 };
 
-// ---------- Auth: login ----------
+/* =========================
+   Auth
+   ========================= */
 app.post('/login', (req, res) => {
   let { login, password } = req.body || {};
   login = sanitize(login);
@@ -203,7 +249,6 @@ app.post('/login', (req, res) => {
   });
 });
 
-// ---------- Auth: register ----------
 app.post('/register', async (req, res) => {
   try {
     let { login, email, password } = req.body || {};
@@ -249,7 +294,9 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// ---------- Password reset: request ----------
+/* =========================
+   Password reset
+   ========================= */
 async function requestResetHandler(req, res) {
   const loginOrEmail = sanitize(req.body?.loginOrEmail || req.body?.identifier || '');
   if (!loginOrEmail) return res.status(400).json({ ok: false, error: 'MISSING_FIELDS' });
@@ -293,7 +340,6 @@ async function requestResetHandler(req, res) {
 app.post('/auth/request-reset', requestResetHandler);
 app.post('/password/forgot', requestResetHandler);
 
-// ---------- Password reset: confirm ----------
 app.post('/auth/reset-password', async (req, res) => {
   const token = req.body?.token || '';
   const password = typeof req.body?.password === 'string' ? req.body.password : '';
@@ -330,7 +376,9 @@ app.post('/auth/reset-password', async (req, res) => {
   );
 });
 
-// ---------- Progress ----------
+/* =========================
+   Progress / Leaderboard
+   ========================= */
 app.post('/progress', (req, res) => {
   let { userId, levelKey, timeMs, completed } = req.body || {};
   userId = Number(userId) || 0;
@@ -449,6 +497,8 @@ app.get('/leaderboard', (req, res) => {
   });
 });
 
-// ---------- Start ----------
+/* =========================
+   Start
+   ========================= */
 const PORT = Number(process.env.PORT || 3001);
-app.listen(PORT, () => console.log(`✅ API: http://localhost:${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`✅ API listening on :${PORT}`));
