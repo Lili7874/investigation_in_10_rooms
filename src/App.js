@@ -46,7 +46,7 @@ const KNOWN_SCENES = new Set([
 
 const App = () => {
   const gameRef = useRef(null);
-  const [completedLevels, setCompletedLevels] = useState([]);
+  const [completedLevels] = useState([]); // usunięty nieużywany setter
   const [showSidebar, setShowSidebar] = useState(false);
 
   useEffect(() => {
@@ -78,9 +78,10 @@ const App = () => {
       // Start: scena z URL ?scene=..., inaczej LoginScene
       const params = new URLSearchParams(window.location.search);
       const sceneFromUrl = params.get('scene');
-      const startKey = sceneFromUrl && KNOWN_SCENES.has(sceneFromUrl)
-        ? sceneFromUrl
-        : 'LoginScene';
+      const startKey =
+        sceneFromUrl && KNOWN_SCENES.has(sceneFromUrl)
+          ? sceneFromUrl
+          : 'LoginScene';
 
       // Ustaw od razu widoczność sidebara pod scenę startową
       setShowSidebar(!HIDE_SCENES.has(startKey));

@@ -8,7 +8,6 @@ const API =
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
   'http://localhost:3001';
 
-
 export default class LevelSelect extends Phaser.Scene {
   constructor() {
     super({ key: 'LevelSelect' });
@@ -77,6 +76,9 @@ export default class LevelSelect extends Phaser.Scene {
 
       // interaktywność
       row.hit.removeAllListeners();
+      // zapamiętaj bazowe X kłódki, żeby po "shake" wrócić do pozycji
+      const lockBaseX = row.lock.x;
+
       if (isUnlocked) {
         row.hit.setInteractive({ cursor: 'pointer' });
         row.hit.on('pointerover', () => row.bg.setFillStyle(0xffffff, 0.12));
@@ -89,8 +91,11 @@ export default class LevelSelect extends Phaser.Scene {
           // drobny „shake” blokady
           this.tweens.add({
             targets: [row.lock],
-            x: { from: row.lock.x - 3, to: row.lock.x + 3 },
-            duration: 40, yoyo: true, repeat: 3, onComplete: () => { row.lock.x = row.lock.x; }
+            x: { from: lockBaseX - 3, to: lockBaseX + 3 },
+            duration: 40,
+            yoyo: true,
+            repeat: 3,
+            onComplete: () => { row.lock.setX(lockBaseX); } // ← bez samoprzydziału
           });
         });
       }

@@ -659,7 +659,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     nextBtn.addEventListener('click', () => showPage(this._dbState.page + 1));
 
     this._dbKeyHandler = (e) => {
-      const tag = (e.target && e.target.tagName || '').toLowerCase();
+      const tag = ((e.target && e.target.tagName) || '').toLowerCase(); // ← dodane nawiasy
       if (tag === 'input' || tag === 'textarea') return;
       if (e.key === 'ArrowLeft') showPage(this._dbState.page - 1);
       if (e.key === 'ArrowRight') showPage(this._dbState.page + 1);
