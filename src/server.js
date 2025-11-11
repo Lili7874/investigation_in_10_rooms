@@ -20,11 +20,11 @@ const ALLOWED_ORIGINS = String(process.env.ALLOWED_ORIGINS || '')
   .filter(Boolean);
 
 const isLocalhost = (origin) =>
-  /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin || '');
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin || '');
 
 const corsOptions = {
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // np. curl / Postman
+    if (!origin) return cb(null, true); // np. curl/Postman
     if (isLocalhost(origin)) return cb(null, true);
     if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
     cb(new Error(`CORS blocked for origin: ${origin}`));
@@ -41,6 +41,7 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 // ---------- DB ----------
 const db = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
+  port: Number(process.env.DB_PORT || 3306), // <-- ważne dla Railway (public proxy)
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASS || '',
   database: process.env.DB_NAME || 'sledztwo_w_10_pokojach',
