@@ -2,14 +2,14 @@
   command = "npm run build"
   publish = "build"
 
-# PROXY do backendu na Render
+# proxy do Render (TWÓJ URL API)
 [[redirects]]
   from = "/api/*"
-  to = "https://investigation-in-10-rooms.onrender.com/:splat"  # <- sprawdź URL!
+  to = "https://investigation-in-10-rooms.onrender.com/:splat"
   status = 200
   force = true
 
-# SPA fallback (po proxy!)
+# SPA fallback - NA KOŃCU
 [[redirects]]
   from = "/*"
   to = "/index.html"
