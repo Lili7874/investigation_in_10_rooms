@@ -3,11 +3,17 @@ import Phaser from 'phaser';
 import '../styles/LoginScene.css';
 import { safeResume, bindVisibility, unbindVisibility } from '../lib/audioSafe';
 
-const API =
+// na samej górze pliku (zamiast Twojej stałej API)
+const RAW_API =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
   'http://localhost:3001';
 
+// usuń trailing slash i zaloguj w devtools
+const API = String(RAW_API).replace(/\/+$/, '');
+if (typeof window !== 'undefined') {
+  console.log('[RegisterScene] API_BASE =', API);
+}
 
 const PW_RULES = { MIN_LEN: 8, MAX_LEN: 72 };
 const COMMON = new Set([
