@@ -13,7 +13,7 @@ Logika:
 • Inni podejrzani mają słabsze łącza czasowo-przestrzenne z tunelem i zapleczem w chwili zdarzenia.
 */
 
-import BaseInvestigationScene from '../BaseInvestigationScene';
+import BaseInvestigationScene from './BaseInvestigationScene';
 import scenaStacjakolejowa from '../assets/scenes/scena_dworzec_kolejowy.png';
 
 // postacie – mapowanie: Anna, Tomasz, Weronika, Kacper, Julia (świadek)

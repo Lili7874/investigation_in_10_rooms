@@ -1,7 +1,13 @@
 // src/scenes/LoginScene.js
 import Phaser from 'phaser';
-import './LoginScene.css';
-import { safeResume, bindVisibility, unbindVisibility } from './audioSafe';
+import '../styles/LoginScene.css';
+import { safeResume, bindVisibility, unbindVisibility } from '../lib/audioSafe';
+
+const API =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
+  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
+  'http://localhost:3001';
+
 
 class LoginScene extends Phaser.Scene {
   constructor() {
@@ -18,11 +24,9 @@ class LoginScene extends Phaser.Scene {
   }
 
   create() {
-    // poinformuj App + posprzątaj DOM
     window.dispatchEvent(new CustomEvent('sceneChange', { detail: 'LoginScene' }));
     ['deduction-board', 'dialog-log'].forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
 
-    // zatrzymaj inne sceny
     if (this.scene?.manager) {
       this.scene.manager.scenes.forEach(s => {
         if (s?.sys?.settings?.key !== 'LoginScene') this.scene.stop(s.sys.settings.key);
@@ -31,18 +35,12 @@ class LoginScene extends Phaser.Scene {
 
     const { width, height } = this.sys.game.canvas;
 
-    // jednorazowy "unlock" po 1. kliknięciu (bezpieczny)
     this.input.once('pointerdown', () => safeResume(this));
-    // obsługa visibility bez duplikacji i bez dotykania closed context
     bindVisibility(this, 'LoginScene');
 
-    // globalny mute z registry/localStorage + nasłuch zmian
     const reg = this.game.registry;
     let gm = reg.get('globalMuted');
-    if (gm == null) {
-      gm = localStorage.getItem('globalMuted') === '1';
-      reg.set('globalMuted', gm);
-    }
+    if (gm == null) { gm = localStorage.getItem('globalMuted') === '1'; reg.set('globalMuted', gm); }
     this.sound.mute = !!gm;
 
     this._onGlobalMuteChanged = (_parent, value) => {
@@ -51,21 +49,23 @@ class LoginScene extends Phaser.Scene {
     };
     reg.events.on('changedata-globalMuted', this._onGlobalMuteChanged);
 
-    // ambient dla loginu (osobny od __bgm)
     this.ambient = this.sound.add('ambient', { loop: true, volume: 0.3 });
-    try { this.ambient.play(); } catch (_) {}
+    try { this.ambient.play(); } catch {}
 
-    // przycisk MUTE globalny
+    const sfx = (key, cfg) => { try { this.sound.play(key, cfg); } catch {} };
+    this.input.on('pointerdown', () => sfx('click', { volume: 0.8, detune: 50 }));
+
+    this.video = this.add.video(0, 0, 'bgVideo')
+      .setMute(true).setLoop(true).play(true)
+      .setDepth(-1).setDisplaySize(300, 150).setOrigin(0.5).setPosition(width/2, height/2);
+
     const btnSize = 40, pad = 20;
     this.muteBtn = this.add.text(
       this.scale.width - btnSize - pad,
       this.scale.height - btnSize - pad,
       this.sound.mute ? '🔇' : '🔊',
       { fontFamily: 'Monaco, monospace', fontSize: '28px', color: '#FFFFFF' }
-    )
-    .setInteractive({ cursor: 'pointer' })
-    .setScrollFactor(0)
-    .setDepth(2000);
+    ).setInteractive({ cursor: 'pointer' }).setScrollFactor(0).setDepth(2000);
 
     this.muteBtn.on('pointerdown', (pointer) => {
       pointer?.event?.stopImmediatePropagation?.();
@@ -82,18 +82,6 @@ class LoginScene extends Phaser.Scene {
     };
     this.scale.on('resize', this._onResizeMute);
 
-    // krótki helper do SFX (bez stałych referencji – brak błędu "seek")
-    const playSfx = (key, cfg) => { try { this.sound.play(key, cfg); } catch (_) {} };
-
-    // kliknięcia w scenie
-    this.input.on('pointerdown', () => playSfx('click', { volume: 0.8, detune: 50 }));
-
-    // tło wideo
-    this.video = this.add.video(0, 0, 'bgVideo');
-    this.video.setMute(true).setLoop(true).play(true);
-    this.video.setDepth(-1).setDisplaySize(300, 150).setOrigin(0.5).setPosition(width/2, height/2);
-
-    // UI
     const loginUI = document.getElementById('login-ui');
     if (loginUI) loginUI.innerHTML = '';
 
@@ -123,8 +111,7 @@ class LoginScene extends Phaser.Scene {
     });
     togglePass.onclick = () => { passInput.type = passInput.type === 'password' ? 'text' : 'password'; };
 
-    passWrapper.appendChild(passInput);
-    passWrapper.appendChild(togglePass);
+    passWrapper.append(passInput, togglePass);
 
     const errorMsg = document.createElement('div');
     errorMsg.className = 'error-message';
@@ -136,13 +123,12 @@ class LoginScene extends Phaser.Scene {
     const spinner = document.createElement('div');
     spinner.className = 'spinner hidden';
 
-    // ⬇️ NOWE: link „Zapomniałeś hasła?”
     const forgotToggle = document.createElement('div');
     forgotToggle.className = 'register-toggle-text';
     forgotToggle.innerText = 'Zapomniałeś hasła?';
     forgotToggle.style.marginTop = '8px';
     forgotToggle.onclick = () => {
-      try { if (loginUI) loginUI.innerHTML = ''; } catch (_) {}
+      try { if (loginUI) loginUI.innerHTML = ''; } catch {}
       this.scene.start('ForgotPasswordScene');
       this.scene.stop('LoginScene');
     };
@@ -151,53 +137,48 @@ class LoginScene extends Phaser.Scene {
     registerToggle.className = 'register-toggle-text';
     registerToggle.innerText = 'Nie masz konta? Zarejestruj się';
     registerToggle.onclick = () => {
-      try { if (loginUI) loginUI.innerHTML = ''; } catch (_) {}
+      try { if (loginUI) loginUI.innerHTML = ''; } catch {}
       this.scene.start('RegisterScene');
       this.scene.stop('LoginScene');
     };
 
-    const isSubmitting = { value: false };
-
+    let submitting = false;
     const submit = () => {
-      if (isSubmitting.value) return;
+      if (submitting) return;
 
       const username = loginInput.value.trim();
       const password = passInput.value.trim();
       errorMsg.innerText = '';
 
       if (!username || !password) {
-        playSfx('error', { volume: 0.9 });
+        sfx('error', { volume: 0.9 });
         errorMsg.innerText = 'Wszystkie pola są wymagane';
         return;
       }
 
-      playSfx('click', { volume: 0.8, detune: 50 });
-      isSubmitting.value = true;
+      sfx('click', { volume: 0.8, detune: 50 });
+      submitting = true;
       spinner.classList.remove('hidden');
 
-      fetch('http://localhost:3001/login', {
+      fetch(`${API}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ login: username, password })
       })
       .then(res => {
-        if (!res.ok) throw new Error('Błędne dane logowania');
+        if (!res.ok) throw new Error('BAD_LOGIN');
         return res.json();
       })
-      .then((payload) => {
-        // zapisz zalogowanego usera
-        if (payload && payload.user) {
-          localStorage.setItem('user', JSON.stringify(payload.user)); // { id, login, email }
+      .then(payload => {
+        if (payload?.user) {
+          localStorage.setItem('user', JSON.stringify(payload.user));
           localStorage.setItem('lastLogin', payload.user.login || username);
         } else {
           localStorage.setItem('lastLogin', username);
         }
 
         if (loginUI) loginUI.innerHTML = '';
-
         this.video?.stop(); this.video?.destroy();
-
-        // wyłącz ambient z loginu
         if (this.ambient) { this.ambient.stop(); this.ambient.destroy(); this.ambient = null; }
         this.sound.removeByKey && this.sound.removeByKey('ambient');
 
@@ -206,10 +187,10 @@ class LoginScene extends Phaser.Scene {
       })
       .catch(() => {
         errorMsg.innerText = 'Login lub hasło nieprawidłowe';
-        playSfx('error', { volume: 0.9 });
+        sfx('error', { volume: 0.9 });
       })
       .finally(() => {
-        isSubmitting.value = false;
+        submitting = false;
         spinner.classList.add('hidden');
       });
     };
@@ -220,43 +201,23 @@ class LoginScene extends Phaser.Scene {
 
     const formContainer = document.createElement('div');
     formContainer.className = 'form-container';
-    // Dodajemy forgotToggle tuż nad linkiem do rejestracji:
-    formContainer.append(
-      title,
-      loginInput,
-      passWrapper,
-      errorMsg,
-      loginBtn,
-      spinner,
-      forgotToggle,      // ⬅️ nowy link
-      registerToggle
-    );
+    formContainer.append(title, loginInput, passWrapper, errorMsg, loginBtn, spinner, forgotToggle, registerToggle);
     if (loginUI) loginUI.appendChild(formContainer);
 
-    // sprzątanie
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       try {
         if (this._onResizeMute) { this.scale.off('resize', this._onResizeMute); this._onResizeMute = null; }
-        if (this._onGlobalMuteChanged) {
-          this.game.registry.events.off('changedata-globalMuted', this._onGlobalMuteChanged);
-          this._onGlobalMuteChanged = null;
-        }
-
-        // odpinamy zdeduplikowany handler visibility
+        if (this._onGlobalMuteChanged) { this.game.registry.events.off('changedata-globalMuted', this._onGlobalMuteChanged); this._onGlobalMuteChanged = null; }
         unbindVisibility('LoginScene');
-
         this.muteBtn?.destroy(); this.muteBtn = null;
-
         this.video?.stop(); this.video?.destroy();
         if (this.ambient) { this.ambient.stop(); this.ambient.destroy(); this.ambient = null; }
         this.sound.removeByKey && this.sound.removeByKey('ambient');
-      } catch (_) {}
+      } catch {}
     });
 
     this.events.once(Phaser.Scenes.Events.DESTROY, () => {
-      try {
-        if (this.ambient) { this.ambient.stop(); this.ambient.destroy(); this.ambient = null; }
-      } catch (_) {}
+      try { if (this.ambient) { this.ambient.stop(); this.ambient.destroy(); this.ambient = null; } } catch {}
     });
   }
 }

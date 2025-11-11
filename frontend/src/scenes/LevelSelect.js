@@ -1,7 +1,13 @@
 // src/scenes/LevelSelect.js
 import Phaser from 'phaser';
 import { LEVEL_KEYS } from '../levels';
-import { safeResume, bindVisibility, unbindVisibility } from '../audioSafe';
+import { safeResume, bindVisibility, unbindVisibility } from '../lib/audioSafe';
+
+const API =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
+  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
+  'http://localhost:3001';
+
 
 export default class LevelSelect extends Phaser.Scene {
   constructor() {
@@ -28,7 +34,7 @@ export default class LevelSelect extends Phaser.Scene {
   }
   async _fetchProgress(userId) {
     try {
-      const res = await fetch(`http://localhost:3001/progress/${userId}`);
+      const res = await fetch(`${API}/progress/${userId}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json(); // { ok, progress: [{ levelKey, completed, ...}, ...] }
       return data?.progress || [];
@@ -102,7 +108,7 @@ export default class LevelSelect extends Phaser.Scene {
   async create() {
     window.dispatchEvent(new CustomEvent('sceneChange', { detail: 'LevelSelect' }));
 
-    // kolejność poziomów (taką samą ustaw i w Sidebar/LEVEL_KEYS)
+    // kolejność poziomów (taka sama w App/Sidebar)
     const levelOrder = [
       'LevelOffice','LevelRestaurant','LevelLibrary','LevelTrainstation',
       'LevelTheater','LevelMuseum','LevelVillageHouse','LevelHospital','LevelCasino'

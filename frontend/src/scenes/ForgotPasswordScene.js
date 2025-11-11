@@ -1,7 +1,13 @@
 // src/scenes/ForgotPasswordScene.js
 import Phaser from 'phaser';
-import './LoginScene.css';
-import { safeResume, bindVisibility, unbindVisibility } from './audioSafe';
+import '../styles/LoginScene.css';
+import { safeResume, bindVisibility, unbindVisibility } from '../lib/audioSafe';
+
+const API =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
+  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
+  'http://localhost:3001';
+
 
 export default class ForgotPasswordScene extends Phaser.Scene {
   constructor() {
@@ -19,11 +25,9 @@ export default class ForgotPasswordScene extends Phaser.Scene {
   }
 
   create() {
-    // Powiadom o zmianie sceny i zamknij sidebar
-    window.dispatchEvent(new CustomEvent('sceneChange',   { detail: 'ForgotPasswordScene' }));
+    window.dispatchEvent(new CustomEvent('sceneChange', { detail: 'ForgotPasswordScene' }));
     window.dispatchEvent(new CustomEvent('sidebarToggle', { detail: { open: false } }));
 
-    // Ukryj menu/sidebara w tej scenie
     this._hideCssEl = document.createElement('style');
     this._hideCssEl.id = '__hide_sidebar_in_forgot';
     this._hideCssEl.textContent = `
@@ -32,19 +36,15 @@ export default class ForgotPasswordScene extends Phaser.Scene {
     `;
     document.head.appendChild(this._hideCssEl);
 
-    // Sprzątanie pozostałości po innych scenach
     ['deduction-board', 'dialog-log', 'deduction-result'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.remove();
+      const el = document.getElementById(id); if (el) el.remove();
     });
 
     const { width, height } = this.sys.game.canvas;
 
-    // Audio unlock + visibility
     this.input.once('pointerdown', () => safeResume(this));
     bindVisibility(this, 'ForgotPasswordScene');
 
-    // Globalny mute
     const reg = this.game.registry;
     let gm = reg.get('globalMuted');
     if (gm == null) { gm = localStorage.getItem('globalMuted') === '1'; reg.set('globalMuted', gm); }
@@ -55,28 +55,23 @@ export default class ForgotPasswordScene extends Phaser.Scene {
     };
     reg.events.on('changedata-globalMuted', this._onGlobalMuteChanged);
 
-    // Ambient + SFX
     this.ambient = this.sound.add('ambient', { loop: true, volume: 0.3 });
     try { this.ambient.play(); } catch (_) {}
     const playSfx = (k, cfg) => { try { this.sound.play(k, cfg); } catch (_) {} };
     this.input.on('pointerdown', () => playSfx('click', { volume: 0.8, detune: 50 }));
 
-    // Tło wideo
     this.video = this.add.video(0, 0, 'bgVideo');
     this.video.setMute(true).setLoop(true).play(true);
     this.video.setDepth(-1).setDisplaySize(300, 150).setOrigin(0.5).setPosition(width/2, height/2);
 
-    // Globalny przycisk MUTE
     const btnSize = 40, pad = 20;
     this.muteBtn = this.add.text(
       this.scale.width - btnSize - pad,
       this.scale.height - btnSize - pad,
       this.sound.mute ? '🔇' : '🔊',
       { fontFamily: 'Monaco, monospace', fontSize: '28px', color: '#FFFFFF' }
-    )
-      .setInteractive({ cursor: 'pointer' })
-      .setScrollFactor(0)
-      .setDepth(2000);
+    ).setInteractive({ cursor: 'pointer' }).setScrollFactor(0).setDepth(2000);
+
     this.muteBtn.on('pointerdown', (pointer) => {
       pointer?.event?.stopImmediatePropagation?.();
       pointer?.event?.stopPropagation?.();
@@ -86,12 +81,12 @@ export default class ForgotPasswordScene extends Phaser.Scene {
       localStorage.setItem('globalMuted', newMuted ? '1' : '0');
       this.muteBtn.setText(newMuted ? '🔇' : '🔊');
     });
+
     this._onResizeMute = (gameSize) => {
       this.muteBtn?.setPosition(gameSize.width - btnSize - pad, gameSize.height - btnSize - pad);
     };
     this.scale.on('resize', this._onResizeMute);
 
-    // ===== UI „Zapomniałem hasła” =====
     const ui = document.getElementById('login-ui');
     if (ui) ui.innerHTML = '';
 
@@ -100,7 +95,7 @@ export default class ForgotPasswordScene extends Phaser.Scene {
 
     const help = document.createElement('div');
     help.className = 'helper-text';
-    help.innerText = 'Podaj login lub adres e-mail. Jeżeli konto istnieje, wyślemy link do resetu.';
+    help.innerText = 'Podaj login lub adres e-mail. Jeśli konto istnieje, wyślemy link do resetu.';
 
     const identInput = document.createElement('input');
     identInput.className = 'login-input';
@@ -132,19 +127,9 @@ export default class ForgotPasswordScene extends Phaser.Scene {
 
     const form = document.createElement('div');
     form.className = 'form-container';
-    form.append(
-      title,
-      help,
-      identInput,
-      errorMsg,
-      successMsg,
-      submitBtn,
-      spinner,
-      backToLogin
-    );
+    form.append(title, help, identInput, errorMsg, successMsg, submitBtn, spinner, backToLogin);
     if (ui) ui.appendChild(form);
 
-    // Submit
     let isSubmitting = false;
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -152,18 +137,16 @@ export default class ForgotPasswordScene extends Phaser.Scene {
       if (isSubmitting) return;
       errorMsg.innerText = ''; successMsg.innerText = '';
 
-      const identifier = identInput.value.trim();
-      if (!identifier) {
+      const loginOrEmail = identInput.value.trim();
+      if (!loginOrEmail) {
         playSfx('error', { volume: 0.9 });
         errorMsg.innerText = 'Wpisz login lub e-mail.';
         return;
       }
-
-      // Drobna walidacja dla UX (backend i tak obsłuży oba przypadki)
-      const looksLikeEmail = emailRe.test(identifier);
-      if (!looksLikeEmail && identifier.length < 3) {
+      const looksLikeEmail = emailRe.test(loginOrEmail);
+      if (!looksLikeEmail && loginOrEmail.length < 3) {
         playSfx('error', { volume: 0.9 });
-        errorMsg.innerText = 'Login powinien mieć co najmniej 3 znaki lub podaj poprawny e-mail.';
+        errorMsg.innerText = 'Login min. 3 znaki lub podaj poprawny e-mail.';
         return;
       }
 
@@ -172,14 +155,13 @@ export default class ForgotPasswordScene extends Phaser.Scene {
       spinner.classList.remove('hidden');
 
       try {
-        await fetch('http://localhost:3001/password/forgot', {
+        await fetch(`${API}/auth/request-reset`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ identifier })
+          body: JSON.stringify({ loginOrEmail })
         });
-        // zawsze pokazujemy „powodzenie”, żeby nie ujawniać istnienia kont
-        successMsg.innerText = 'Jeśli konto istnieje, wysłaliśmy link resetu. Sprawdź pocztę (w dev — log serwera).';
-      } catch (_) {
+        successMsg.innerText = 'Jeśli konto istnieje, wysłaliśmy link resetu. Sprawdź pocztę.';
+      } catch {
         errorMsg.innerText = 'Brak połączenia z serwerem.';
         playSfx('error', { volume: 0.9 });
       } finally {
@@ -192,7 +174,6 @@ export default class ForgotPasswordScene extends Phaser.Scene {
     identInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
     submitBtn.onclick = () => { playSfx('click', { volume: 0.8, detune: 50 }); submit(); };
 
-    // Sprzątanie
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       try {
         if (this._onResizeMute) { this.scale.off('resize', this._onResizeMute); this._onResizeMute = null; }
@@ -201,14 +182,11 @@ export default class ForgotPasswordScene extends Phaser.Scene {
           this._onGlobalMuteChanged = null;
         }
         unbindVisibility('ForgotPasswordScene');
-
         if (this._hideCssEl && this._hideCssEl.parentNode) {
           this._hideCssEl.parentNode.removeChild(this._hideCssEl);
           this._hideCssEl = null;
         }
-
         this.muteBtn?.destroy(); this.muteBtn = null;
-
         this.video?.stop(); this.video?.destroy();
         if (this.ambient) { this.ambient.stop(); this.ambient.destroy(); this.ambient = null; }
         this.sound.removeByKey && this.sound.removeByKey('ambient');

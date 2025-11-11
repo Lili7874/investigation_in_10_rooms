@@ -14,7 +14,7 @@ Logika:
 • Finał w czytelni: przewrócona lampka świadczy o szarpaninie, gdzie bibliotekarz próbował odzyskać manuskrypt.
 */
 
-import BaseInvestigationScene from '../BaseInvestigationScene';
+import BaseInvestigationScene from './BaseInvestigationScene';
 import scenaBiblioteka from '../assets/scenes/scena_biblioteka_miejska.png';
 
 // postacie – mapowanie: Rafał, Julia, Jakub, Weronika, Szymon (świadek)

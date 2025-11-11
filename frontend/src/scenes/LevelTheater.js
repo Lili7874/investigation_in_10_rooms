@@ -13,7 +13,7 @@ Logika:
 • Marynarka Piotra z kurzem sceny i papier tego samego bloku co notatki Julii to mylące tropy — nie łączą się z cięciem liny ani czasem zdarzenia.
 */
 
-import BaseInvestigationScene from '../BaseInvestigationScene';
+import BaseInvestigationScene from './BaseInvestigationScene';
 import scenaTeatr from '../assets/scenes/scena_teatr.png';
 
 // postacie – mapowanie: Alicja, Michał, Piotr, Julia, Szymon (świadek)

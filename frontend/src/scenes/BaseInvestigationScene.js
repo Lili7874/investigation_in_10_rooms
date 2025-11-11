@@ -1,7 +1,13 @@
 // src/scenes/BaseInvestigationScene.js
 import Phaser from 'phaser';
-import './GameScene.css';
-import { safeResume, bindVisibility, unbindVisibility } from './audioSafe';
+import '../styles/GameScene.css';
+import { safeResume, bindVisibility, unbindVisibility } from '../lib/audioSafe';
+
+const API =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
+  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
+  'http://localhost:3001';
+
 
 export default class BaseInvestigationScene extends Phaser.Scene {
   constructor(key, cfg) {
@@ -11,7 +17,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     this.startTime = 0;
     this.timerText = null;
 
-    // NEW: rekord z bazy
     this.bestTimeMs = null;
     this.bestHud = null;
     this.bestBg = null;
@@ -20,10 +25,8 @@ export default class BaseInvestigationScene extends Phaser.Scene {
 
     this.characters = [];
     this.characterPositions = [];
-
     this.items = [];
     this.itemPositions = [];
-
     this.places = [];
     this.placePositions = [];
 
@@ -39,14 +42,11 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     this._onResizeMute = null;
     this._onSidebarToggle = null;
     this._dbKeyHandler = null;
-
     this._dedInputs = null;
 
-    // global mute (bez lokalnych visibility listenerów)
     this._onGlobalMuteChanged = null;
   }
 
-  // === helpers: namespacing kluczy tekstur dla każdej sceny ===
   _texKey(key) { return `${this.scene.key}__${key}`; }
   _getAvatarBase64(key) {
     if (!key) return '';
@@ -56,7 +56,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     return '';
   }
 
-  // ——— twarde wyłączenie innych scen ———
   _enforceSingleActiveScene() {
     const mgr = this.scene.manager;
     const active = mgr.getScenes(true);
@@ -67,9 +66,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     });
   }
 
-  // ------------- ŁADOWANIE -------------
   preload() {
-    // Tło (ładujemy pod namespaced kluczem)
     const bgNs = this._texKey(this._cfg.bgKey);
     if (!this.textures.exists(bgNs)) this.load.image(bgNs, this._cfg.bgSrc);
 
@@ -82,21 +79,18 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       if (!this.textures.exists(ns)) this.load.image(ns, src);
     };
 
-    // Postacie + avatary
     (this._cfg.characters || []).forEach(c => {
       loadIfNeeded(c.key, c.src);
       const av = c.avatar;
       if (av && typeof av === 'object') loadIfNeeded(av.key, av.src);
     });
 
-    // Przedmioty + avatary
     (this._cfg.items || []).forEach(it => {
       loadIfNeeded(it.key, it.src);
       const av = it.avatar;
       if (av && typeof av === 'object') loadIfNeeded(av.key, av.src);
     });
 
-    // Miejsca + avatary
     (this._cfg.places || []).forEach(pl => {
       loadIfNeeded(pl.key, pl.src);
       const av = pl.avatar;
@@ -104,17 +98,14 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     });
   }
 
-  // ------------- START SCENY -------------
   async create() {
     this._enforceSingleActiveScene();
     this._purgeOrphanedUi();
     this._wireShutdownHooks();
-
     window.dispatchEvent(new CustomEvent('sceneChange', { detail: this.scene.key }));
 
     const { width, height } = this.sys.game.canvas;
 
-    // Tło
     const bg = this.add.image(width / 2, height / 2, this._texKey(this._cfg.bgKey));
     const scale = Math.min(width / bg.width, height / bg.height) * 1.1;
     bg.setScale(scale).setOrigin(0.5, 0.5);
@@ -126,12 +117,9 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     this.items = this._cfg.items || [];
     this.places = this._cfg.places || [];
 
-    this.characterPositions = Array.isArray(this._cfg.positions)
-      ? this._cfg.positions : this._autoPositions(this.characters.length);
-    this.itemPositions = Array.isArray(this._cfg.itemPositions)
-      ? this._cfg.itemPositions : this._autoPositionsSecondary(this.items.length);
-    this.placePositions = Array.isArray(this._cfg.placePositions)
-      ? this._cfg.placePositions : this._autoPositionsSecondary(this.places.length);
+    this.characterPositions = Array.isArray(this._cfg.positions) ? this._cfg.positions : this._autoPositions(this.characters.length);
+    this.itemPositions      = Array.isArray(this._cfg.itemPositions) ? this._cfg.itemPositions : this._autoPositionsSecondary(this.items.length);
+    this.placePositions     = Array.isArray(this._cfg.placePositions) ? this._cfg.placePositions : this._autoPositionsSecondary(this.places.length);
 
     this._dedLists = this._buildDeductionLists();
     this._notesLists = this._buildNotesLists();
@@ -141,7 +129,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     this.createDeductionBoard(this._dedLists);
     this.createIntroOverlay(this._cfg.title || 'Scena', this._cfg.intro || '');
 
-    this.buildTimerHud();  // ⟵ tworzy też „Rekord”
+    this.buildTimerHud();
     this.tweens.add({ targets: this.timerBg, alpha: { from: 0.9, to: 0.6 }, duration: 1600, yoyo: true, repeat: -1 });
 
     this._onResize = () => this.layoutTimer();
@@ -156,17 +144,14 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     };
     window.addEventListener('sidebarToggle', this._onSidebarToggle);
 
-    // odblokowanie AudioContext po 1. kliknięciu – bezpiecznie
     this.input.once('pointerdown', () => safeResume(this));
 
-    // --- MUZYKA TŁA (singleton) ---
     if (!this.game.__bgm) {
       this.game.__bgm = this.sound.add('bgm', { loop: true, volume: 0.5 });
       this.game.__bgm.play();
     }
     this.bgm = this.game.__bgm;
 
-    // --- GLOBAL MUTE: inicjalizacja i nasłuch ---
     const reg = this.game.registry;
     let gm = reg.get('globalMuted');
     if (gm == null) {
@@ -181,10 +166,8 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     };
     reg.events.on('changedata-globalMuted', this._onGlobalMuteChanged);
 
-    // wspólny handler widoczności (brak lokalnego listenera)
     bindVisibility(this, this.scene.key);
 
-    // --- PRZYCISK MUTE oparty o globalny stan ---
     const btnSize = 40, pad = 20;
     this.muteBtn = this.add.text(
       this.scale.width - btnSize - pad,
@@ -197,9 +180,8 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     .setDepth(2000);
 
     this.muteBtn.on('pointerdown', (pointer) => {
-      if (pointer?.event?.stopImmediatePropagation) pointer.event.stopImmediatePropagation();
-      if (pointer?.event?.stopPropagation) pointer.event.stopPropagation();
-
+      pointer?.event?.stopImmediatePropagation?.();
+      pointer?.event?.stopPropagation?.();
       const newMuted = !this.sound.mute;
       this.sound.mute = newMuted;
       this.game.registry.set('globalMuted', newMuted);
@@ -212,16 +194,13 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     };
     this.scale.on('resize', this._onResizeMute);
 
-    // ⟵ pobierz rekord z bazy (jeśli użytkownik zalogowany)
     await this._loadBestTime();
     this.layoutTimer();
   }
 
-  // ------------- TIMER + REKORD -------------
   buildTimerHud() {
     this.startTime = this.time.now;
 
-    // Licznik czasu (jak wcześniej)
     this.timerHud = this.add.container(0, 0).setDepth(1000).setScrollFactor(0);
     this.timerBg = this.add.graphics();
     this.timerIcon = this.add.text(0, 0, '⏱', { fontFamily: 'Monaco, monospace', fontSize: '22px', color: '#FFFFFF' });
@@ -231,7 +210,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     this.timerHud.add(this.timerIcon);
     this.timerHud.add(this.timerText);
 
-    // NOWE: „Rekord” (najlepszy czas z bazy)
     this.bestHud = this.add.container(0, 0).setDepth(1000).setScrollFactor(0);
     this.bestBg = this.add.graphics();
     this.bestIcon = this.add.text(0, 0, '🏆', { fontFamily: 'Monaco, monospace', fontSize: '22px', color: '#FFFFFF' });
@@ -252,10 +230,8 @@ export default class BaseInvestigationScene extends Phaser.Scene {
 
   layoutTimer() {
     const { width: sw } = this.scale;
-    const margin = 20, padX = 14, padY = 8, gap = 8, radius = 14;
-    const between = 10; // odstęp między „Rekord” i „Czas”
+    const margin = 20, padX = 14, padY = 8, gap = 8, radius = 14, between = 10;
 
-    // — timer —
     this.timerIcon.setPosition(0, 0);
     this.timerText.setPosition(this.timerIcon.width + gap, 0);
 
@@ -274,7 +250,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     this.timerText.x = this.timerIcon.x + this.timerIcon.width + gap;
     this.timerText.y = padY + (tBgH - 2 * padY - this.timerText.height) / 2;
 
-    // — best —
     this.bestIcon.setPosition(0, 0);
     this.bestText.setPosition(this.bestIcon.width + gap, 0);
 
@@ -293,10 +268,8 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     this.bestText.x = this.bestIcon.x + this.bestIcon.width + gap;
     this.bestText.y = padY + (bBgH - 2 * padY - this.bestText.height) / 2;
 
-    // Pozycjonowanie w prawym górnym rogu: [ REKORD ][ odstęp ][ CZAS ]
     this.timerHud.x = sw - margin - tBgW;
     this.timerHud.y = margin;
-
     this.bestHud.x = this.timerHud.x - between - bBgW;
     this.bestHud.y = margin;
   }
@@ -309,7 +282,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     this.layoutTimer();
   }
 
-  // ------------- INTRO -------------
   createIntroOverlay(titleText, introText) {
     const board = document.getElementById('deduction-board');
     if (board) board.style.display = 'none';
@@ -343,7 +315,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     const btnW = 200, btnH = 48;
     const btnX = width / 2, btnY = (height + panelH) / 2 - 40;
 
-    // === PRZYCISK START z pełną strefą kliknięcia ===
     const btn = this.add.container(btnX, btnY).setDepth(2003).setScrollFactor(0);
     const btnGfx = this.add.graphics();
     btnGfx.fillStyle(0x3e0f6f, 1);
@@ -355,7 +326,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       fontFamily: 'Monaco, monospace', fontSize: '15px', color: '#FFFFFF'
     }).setOrigin(0.5);
 
-    // pełne hit-area
     const hit = this.add.zone(0, 0, btnW, btnH).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
 
     btn.add([btnGfx, btnTxt, hit]);
@@ -387,7 +357,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     this._introUi.push(shade, panelGfx, title, body, btn, btnGfx, btnTxt, hit);
   }
 
-  // ------------- DIALOG PANEL -------------
   createDialogPanel() {
     const { width, height } = this.sys.game.canvas;
     this.dialogPanel = this.add.rectangle(width / 1.85, height - 30, width * 0.8, 100, 0x000000, 0.8)
@@ -410,7 +379,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     }
   }
 
-  // ------------- POSTACIE / PRZEDMIOTY / MIEJSCA -------------
   _nameForCharacter(index, c) {
     return this._notesLists?.characters?.[index]
         || c.name || c.displayName
@@ -527,7 +495,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     });
   }
 
-  // ------------- NOTATKI -------------
   createDialogLog() {
     if (document.getElementById('dialog-log')) return;
     const container = document.createElement('div'); container.id = 'dialog-log';
@@ -537,7 +504,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
   }
 
   addDialogEntry(name, text, avatarKey) {
-    let avatarDataUrl = this._getAvatarBase64(avatarKey);
+    const avatarDataUrl = this._getAvatarBase64(avatarKey);
     const list = document.getElementById('dialog-log-list'); if (!list) return;
 
     const entry = document.createElement('div'); entry.className = 'dialog-entry';
@@ -554,20 +521,13 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     list.prepend(entry);
   }
 
-  // ------------- LISTY DEDUKCJI -------------
   _buildDeductionLists() {
     const d = this._cfg.deduction || {};
-
-    const suspects = d.suspects?.length
-      ? d.suspects.slice()
+    const suspects = d.suspects?.length ? d.suspects.slice()
       : (this.characters || []).map(c => c.name || c.displayName || c.key).filter(Boolean);
-
-    const places = d.places?.length
-      ? d.places.slice()
+    const places = d.places?.length ? d.places.slice()
       : (this.places || []).map(p => p.name || p.label || p.key).filter(Boolean);
-
-    const items = d.items?.length
-      ? d.items.slice()
+    const items = d.items?.length ? d.items.slice()
       : (this.items || []).map(i => i.name || i.label || i.key).filter(Boolean);
 
     const fb = (arr, def) => (arr && arr.length ? arr : def);
@@ -578,7 +538,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     };
   }
 
-  // ------------- NOTATNIK -------------
   _buildNotesLists() {
     const n = this._cfg.notes || {};
     const pick = (arr, fb) => (Array.isArray(arr) && arr.length ? arr.slice() : fb || []);
@@ -589,7 +548,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     };
   }
 
-  // ------------- TABLICA DEDUKCJI -------------
   createDeductionBoard(dedLists = { suspects: [], places: [], items: [] }) {
     if (document.getElementById('deduction-board')) return;
 
@@ -673,15 +631,9 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     finishBtn.id = 'deduction-finish-btn';
     finishBtn.textContent = 'Zakończ poziom';
     finishBtn.onclick = () => {
-      const ans = {
-        suspect: sRow.input.value.trim(),
-        item:    iRow.input.value.trim(),
-        place:   pRow.input.value.trim(),
-      };
+      const ans = { suspect: sRow.input.value.trim(), item: iRow.input.value.trim(), place: pRow.input.value.trim() };
       const check = this._checkDeduction(ans);
-      if (check.hasSolution) {
-        this._showDeductionResult(check, ans);
-      }
+      if (check.hasSolution) this._showDeductionResult(check, ans);
       if (typeof this._cfg.onDeductionSubmit === 'function') {
         try { this._cfg.onDeductionSubmit({ ...ans, result: check }); } catch (e) { console.warn(e); }
       } else if (!check.hasSolution) {
@@ -723,7 +675,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     cell.textContent = states[s];
   }
 
-  // ====== UNIWERALNY CHECKER ======
   _normalize(str) {
     if (!str) return '';
     const s = String(str).trim().toLowerCase();
@@ -770,7 +721,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     const c = this._normalize(choice);
     if (!c) return false;
     if (set.has(c)) return true;
-
     if (c.length >= 4) {
       for (const t of set) {
         if (t.includes(c) || c.includes(t)) return true;
@@ -798,7 +748,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     return res;
   }
 
-  // ====== PRZYCISK „NASTĘPNY POZIOM” W MODALU ======
   _resolveLevelOrder() {
     const reg = this.game?.registry?.get('levelOrder');
     if (Array.isArray(reg) && reg.length) return reg.slice();
@@ -822,7 +771,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     try { mgr.start(key); } catch (e) { console.warn('Nie mogę uruchomić sceny:', key, e); }
   }
 
-  // === LEADERBOARD: helper ===
   _getUser() {
     try {
       const raw = localStorage.getItem('user');
@@ -832,7 +780,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     }
   }
 
-  // --- NEW: bezpieczny fetch JSON z timeoutem + fallback ścieżki
   async _fetchLeaderboardJSON(levelKey, timeoutMs = 6000) {
     const ctr = new AbortController();
     const t = setTimeout(() => ctr.abort('timeout'), timeoutMs);
@@ -847,9 +794,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       const contentType = res.headers.get('content-type') || '';
       let body;
       try {
-        body = contentType.includes('application/json')
-          ? await res.json()
-          : await res.text();
+        body = contentType.includes('application/json') ? await res.json() : await res.text();
       } catch {
         body = null;
       }
@@ -857,32 +802,22 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     };
 
     try {
-      const url1 = `http://localhost:3001/leaderboard/${encodeURIComponent(levelKey)}`;
+      const url1 = `${API}/leaderboard/${encodeURIComponent(levelKey)}`;
       let r = await tryOnce(url1);
-      if (r.ok && r.body && r.body.ok) {
-        clearTimeout(t);
-        return r.body;
-      }
+      if (r.ok && r.body && r.body.ok) { clearTimeout(t); return r.body; }
 
-      const url2 = `http://localhost:3001/leaderboard?levelKey=${encodeURIComponent(levelKey)}`;
+      const url2 = `${API}/leaderboard?levelKey=${encodeURIComponent(levelKey)}`;
       let r2 = await tryOnce(url2);
-      if (r2.ok && r2.body && r2.body.ok) {
-        clearTimeout(t);
-        return r2.body;
-      }
+      if (r2.ok && r2.body && r2.body.ok) { clearTimeout(t); return r2.body; }
 
-      console.warn('[LB] oba wywołania nieudane', { first: r, second: r2 });
       clearTimeout(t);
-      throw new Error(
-        `Leaderboard fetch failed (${r.status} via :param, ${r2.status} via ?query)`
-      );
+      throw new Error(`Leaderboard fetch failed (${r.status} via :param, ${r2.status} via ?query)`);
     } catch (e) {
       clearTimeout(t);
       throw e;
     }
   }
 
-  // --- zmodyfikowane: wczytanie i render rankingu z fallbackiem
   async _loadLeaderboardInto(targetEl) {
     if (!targetEl) return;
     const user = this._getUser?.();
@@ -975,7 +910,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     rows.appendChild(mkRow('Przedmiot',  result.details.item,    ans.item));
     rows.appendChild(mkRow('Miejsce',    result.details.place,   ans.place));
 
-    // === RANKING (Top 5) — tylko po poprawnym ukończeniu ===
     let leaderboardBox = null;
     let onSaved = null;
     if (result.okAll) {
@@ -997,9 +931,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       lbWrap.appendChild(leaderboardBox);
       panel.appendChild(lbWrap);
 
-      // Załaduj ranking teraz…
       this._loadLeaderboardInto(leaderboardBox);
-      // …i odśwież po zapisie progresu (gdy byłeś lepszy)
       onSaved = (e) => {
         if (e?.detail?.levelKey === this.scene.key) this._loadLeaderboardInto(leaderboardBox);
       };
@@ -1076,7 +1008,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     document.body.appendChild(wrap);
   }
 
-  // ------------- AUTO-POZYCJE -------------
   _autoPositions(count) {
     const { width, height } = this.scale;
     const cx = width * 0.5;
@@ -1119,7 +1050,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     return positions;
   }
 
-  // ------------- SPRZĄTANIE -------------
   _purgeOrphanedUi() {
     ['deduction-board', 'dialog-log', 'deduction-result'].forEach(id => {
       const el = document.getElementById(id);
@@ -1150,10 +1080,9 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     });
   }
 
-  // === zapis/pobranie progresu ===
   async _postProgress({ userId, levelKey, timeMs, completed }) {
     try {
-      const res = await fetch('http://localhost:3001/progress', {
+      const res = await fetch(`${API}/progress`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, levelKey, timeMs, completed }),
@@ -1174,7 +1103,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:3001/progress/${user.id}`);
+      const res = await fetch(`${API}/progress/${user.id}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const levelKey = this.scene.key;
@@ -1223,7 +1152,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       this._onGlobalMuteChanged = null;
     }
 
-    // zdejmij wspólny handler visibility
     unbindVisibility(this.scene.key);
 
     this._clearIntroUi();
@@ -1258,7 +1186,6 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     if (this.shownDialogs) this.shownDialogs.clear();
     this._dedInputs = null;
 
-    // usuń tylko tekstury tej sceny
     this._removeSceneTextures();
   }
 

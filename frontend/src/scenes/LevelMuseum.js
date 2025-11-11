@@ -14,7 +14,7 @@ Logika:
 • Tomasz widziany przy magazynie to mylący trop; brak śladów ingerencji w sejfy tej nocy.
 */
 
-import BaseInvestigationScene from '../BaseInvestigationScene';
+import BaseInvestigationScene from './BaseInvestigationScene';
 import scenaMuzeum from '../assets/scenes/scena_muzeum.png';
 
 // postacie – mapowanie: Anna, Marzena, Kacper, Tomasz, Weronika (świadek)

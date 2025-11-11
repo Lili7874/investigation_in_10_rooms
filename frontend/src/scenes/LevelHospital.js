@@ -15,7 +15,7 @@ Logika:
 • Trop z paczką papierosów na korytarzu przy windach łączy się z nerwowym zachowaniem Anny (palenie mimo zakazu) w oknie czasowym zbrodni.
 */
 
-import BaseInvestigationScene from '../BaseInvestigationScene';
+import BaseInvestigationScene from './BaseInvestigationScene';
 import scenaSzpital from '../assets/scenes/scena_szpital.png';
 
 // postacie 

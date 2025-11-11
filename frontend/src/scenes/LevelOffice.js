@@ -12,7 +12,7 @@ Logika:
 • Kubek z kawą bez śladów trucizny → eskalacja w szarpaninę, nie podtrucie.
 */
 
-import BaseInvestigationScene from '../BaseInvestigationScene';
+import BaseInvestigationScene from './BaseInvestigationScene';
 import scenaBiuro from '../assets/scenes/scena_pokoj_w_biurze.png';
 
 // postacie – mapowanie: Marzena, Kacper, Tomasz, Piotr, Anna (świadek)

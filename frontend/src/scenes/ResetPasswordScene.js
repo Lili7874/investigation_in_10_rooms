@@ -1,7 +1,13 @@
 // src/scenes/ResetPasswordScene.js
 import Phaser from 'phaser';
-import './LoginScene.css';
-import { safeResume, bindVisibility, unbindVisibility } from './audioSafe';
+import '../styles/LoginScene.css';
+import { safeResume, bindVisibility, unbindVisibility } from '../lib/audioSafe';
+
+const API =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
+  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
+  'http://localhost:3001';
+
 
 export default class ResetPasswordScene extends Phaser.Scene {
   constructor() {
@@ -18,14 +24,12 @@ export default class ResetPasswordScene extends Phaser.Scene {
   }
 
   create() {
-    // sygnał dla aplikacji + porządki
     window.dispatchEvent(new CustomEvent('sceneChange', { detail: 'ResetPasswordScene' }));
     ['deduction-board', 'dialog-log', 'deduction-result'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.remove();
     });
 
-    // zatrzymaj inne sceny
     if (this.scene?.manager) {
       this.scene.manager.scenes.forEach(s => {
         if (s?.sys?.settings?.key && s.sys.settings.key !== 'ResetPasswordScene') {
@@ -36,11 +40,9 @@ export default class ResetPasswordScene extends Phaser.Scene {
 
     const { width, height } = this.sys.game.canvas;
 
-    // audio unlock + visibility
     this.input.once('pointerdown', () => safeResume(this));
     bindVisibility(this, 'ResetPasswordScene');
 
-    // global mute
     const reg = this.game.registry;
     let gm = reg.get('globalMuted');
     if (gm == null) { gm = localStorage.getItem('globalMuted') === '1'; reg.set('globalMuted', gm); }
@@ -52,20 +54,16 @@ export default class ResetPasswordScene extends Phaser.Scene {
     };
     reg.events.on('changedata-globalMuted', this._onGlobalMuteChanged);
 
-    // ambient
     this.ambient = this.sound.add('ambient', { loop: true, volume: 0.3 });
     try { this.ambient.play(); } catch (_) {}
 
-    // helper SFX
     const playSfx = (key, cfg) => { try { this.sound.play(key, cfg); } catch (_) {} };
     this.input.on('pointerdown', () => playSfx('click', { volume: 0.8, detune: 50 }));
 
-    // tło wideo
     this.video = this.add.video(0, 0, 'bgVideo');
-    this.video.setMute(true).setLoop(true).play(true);
+    try { this.video.setMute(true).setLoop(true).play(true); } catch (_) {}
     this.video.setDepth(-1).setDisplaySize(300, 150).setOrigin(0.5).setPosition(width/2, height/2);
 
-    // przycisk MUTE
     const btnSize = 40, pad = 20;
     this.muteBtn = this.add.text(
       this.scale.width - btnSize - pad,
@@ -92,27 +90,27 @@ export default class ResetPasswordScene extends Phaser.Scene {
     };
     this.scale.on('resize', this._onResizeMute);
 
-    // ------ UI ------
     const ui = document.getElementById('login-ui');
     if (ui) ui.innerHTML = '';
 
     const title = document.createElement('h1');
     title.innerText = 'Ustaw nowe hasło';
 
-    // Odczyt tokenu z URL (?token=... lub ?resetToken=...)
+    // ⬇️ Token: query (?token= / ?resetToken=) oraz fragment (#token= / #resetToken=)
     const params = new URLSearchParams(window.location.search);
-    const token = params.get('token') || params.get('resetToken') || '';
+    let token = params.get('token') || params.get('resetToken') || '';
+    if (!token && window.location.hash) {
+      const h = new URLSearchParams(window.location.hash.slice(1));
+      token = h.get('token') || h.get('resetToken') || '';
+    }
 
     const tokenInfo = document.createElement('div');
     tokenInfo.className = 'info-message';
     tokenInfo.style.marginBottom = '8px';
-    if (!token) {
-      tokenInfo.innerText = 'Brak tokenu resetu w adresie. Użyj linku z e-maila.';
-    } else {
-      tokenInfo.innerText = 'Token został odczytany z linku. Możesz ustawić nowe hasło.';
-    }
+    tokenInfo.innerText = token
+      ? 'Token został odczytany z linku. Możesz ustawić nowe hasło.'
+      : 'Brak tokenu resetu w adresie. Użyj linku z e-maila.';
 
-    // Nowe hasło
     const passWrapper = document.createElement('div');
     passWrapper.className = 'pass-wrapper';
     passWrapper.style.position = 'relative';
@@ -121,18 +119,19 @@ export default class ResetPasswordScene extends Phaser.Scene {
     passInput.className = 'login-input';
     passInput.type = 'password';
     passInput.placeholder = 'Nowe hasło';
-    passInput.maxLength = 72; // zgodnie z limitem bcrypt w backendzie
+    passInput.maxLength = 72;
 
     const togglePass = document.createElement('span');
     togglePass.innerText = '🧿';
     togglePass.className = 'toggle-password';
+    togglePass.setAttribute('role', 'button');
+    togglePass.setAttribute('aria-label', 'Pokaż/ukryj hasło');
     Object.assign(togglePass.style, {
       position: 'absolute', top: '50%', right: '12px', transform: 'translateY(-50%)',
       cursor: 'pointer', color: '#b983ff', textShadow: '0 0 6px #a96fff', zIndex: 6
     });
     togglePass.onclick = () => { passInput.type = passInput.type === 'password' ? 'text' : 'password'; };
 
-    // Dymek z wymaganiami
     const hint = document.createElement('div');
     hint.className = 'password-hint-bubble';
     Object.assign(hint.style, {
@@ -164,6 +163,22 @@ export default class ResetPasswordScene extends Phaser.Scene {
       </ul>
     `;
 
+    // ℹ️ Mobilny toggle dymka (na dotyku nie ma hovera)
+    const infoTap = document.createElement('span');
+    infoTap.textContent = 'ℹ️';
+    infoTap.setAttribute('role', 'button');
+    infoTap.setAttribute('aria-label', 'Pokaż wymagania hasła');
+    Object.assign(infoTap.style, {
+      position: 'absolute', right: '38px', top: '50%', transform: 'translateY(-50%)',
+      fontSize: '14px', color: '#b983ff', cursor: 'pointer', userSelect: 'none', textShadow: '0 0 6px #a96fff', zIndex: 6
+    });
+    let hintOpen = false;
+    infoTap.onclick = () => {
+      hintOpen = !hintOpen;
+      hint.style.display = hintOpen ? 'block' : 'none';
+      if (hintOpen) updateUiForPassword();
+    };
+
     const strength = document.createElement('div');
     strength.className = 'password-strength';
     Object.assign(strength.style, { marginTop: '6px', height: '6px', background: 'rgba(255,255,255,.1)', borderRadius: '6px', overflow: 'hidden' });
@@ -171,9 +186,8 @@ export default class ResetPasswordScene extends Phaser.Scene {
     Object.assign(strengthBar.style, { height: '100%', width: '0%', transition: 'width .25s', background: '#8e4dff' });
     strength.appendChild(strengthBar);
 
-    passWrapper.append(passInput, togglePass, hint, strength);
+    passWrapper.append(passInput, togglePass, infoTap, hint, strength);
 
-    // Potwierdź hasło
     const pass2Wrapper = document.createElement('div');
     pass2Wrapper.className = 'pass-wrapper';
     pass2Wrapper.style.position = 'relative';
@@ -187,6 +201,8 @@ export default class ResetPasswordScene extends Phaser.Scene {
     const togglePass2 = document.createElement('span');
     togglePass2.innerText = '🧿';
     togglePass2.className = 'toggle-password';
+    togglePass2.setAttribute('role', 'button');
+    togglePass2.setAttribute('aria-label', 'Pokaż/ukryj hasło');
     Object.assign(togglePass2.style, {
       position: 'absolute', top: '50%', right: '12px', transform: 'translateY(-50%)',
       cursor: 'pointer', color: '#b983ff', textShadow: '0 0 6px #a96fff'
@@ -195,17 +211,19 @@ export default class ResetPasswordScene extends Phaser.Scene {
 
     pass2Wrapper.append(pass2Input, togglePass2);
 
-    // komunikaty
     const errorMsg = document.createElement('div');
     errorMsg.className = 'error-message';
 
     const successMsg = document.createElement('div');
     successMsg.className = 'success-message';
 
-    // przyciski
     const submitBtn = document.createElement('button');
     submitBtn.className = 'login-button';
     submitBtn.innerText = 'Zmień hasło';
+    // ⬇️ Zablokuj przycisk, gdy nie ma tokenu
+    submitBtn.disabled = !token;
+    submitBtn.style.opacity = token ? '1' : '.6';
+    submitBtn.style.cursor  = token ? 'pointer' : 'not-allowed';
 
     const spinner = document.createElement('div');
     spinner.className = 'spinner hidden';
@@ -218,7 +236,6 @@ export default class ResetPasswordScene extends Phaser.Scene {
       this.scene.stop('ResetPasswordScene');
     };
 
-    // siła hasła + walidacja
     const reqList = () => {
       const ul = hint.querySelector('#pw-reqs');
       return {
@@ -248,7 +265,6 @@ export default class ResetPasswordScene extends Phaser.Scene {
         space: !/\s/.test(p),
         max:  p.length <= 72,
       };
-      // Do paska siły liczymy 5 głównych wymagań (len, low, up, num, spec)
       const strengthKeys = ['len','low','up','num','spec'];
       const score = strengthKeys.reduce((acc, k) => acc + (checks[k] ? 1 : 0), 0);
       return { checks, score };
@@ -264,16 +280,14 @@ export default class ResetPasswordScene extends Phaser.Scene {
       setReqOk(reqs.spec, checks.spec);
       setReqOk(reqs.space,checks.space);
       setReqOk(reqs.max,  checks.max);
-      // pasek (0..5) → %
       strengthBar.style.width = (score * 20) + '%';
       strengthBar.style.background = score >= 4 ? '#7cff8e' : (score >= 2 ? '#f0c24b' : '#e57373');
     };
 
     passInput.addEventListener('focus', () => { hint.style.display = 'block'; updateUiForPassword(); });
-    passInput.addEventListener('blur',  () => { hint.style.display = 'none'; });
+    passInput.addEventListener('blur',  () => { if (!hintOpen) hint.style.display = 'none'; });
     passInput.addEventListener('input', updateUiForPassword);
 
-    // submit
     const isSubmitting = { value: false };
 
     const submit = async () => {
@@ -288,7 +302,7 @@ export default class ResetPasswordScene extends Phaser.Scene {
         return;
       }
 
-      const p1 = passInput.value;   // nie trim – backend sprawdza spacje jawnie
+      const p1 = passInput.value;
       const p2 = pass2Input.value;
 
       const { checks } = evalPassword(p1);
@@ -296,16 +310,19 @@ export default class ResetPasswordScene extends Phaser.Scene {
 
       if (!p1 || !p2) {
         errorMsg.innerText = 'Uzupełnij oba pola hasła.';
+        passInput.focus();
         try { this.sound.play('error', { volume: 0.9 }); } catch(_) {}
         return;
       }
       if (!strong) {
         errorMsg.innerText = 'Hasło nie spełnia wymagań.';
+        passInput.focus();
         try { this.sound.play('error', { volume: 0.9 }); } catch(_) {}
         return;
       }
       if (p1 !== p2) {
         errorMsg.innerText = 'Hasła muszą być identyczne.';
+        pass2Input.focus();
         try { this.sound.play('error', { volume: 0.9 }); } catch(_) {}
         return;
       }
@@ -314,7 +331,7 @@ export default class ResetPasswordScene extends Phaser.Scene {
       spinner.classList.remove('hidden');
 
       try {
-        const res = await fetch('http://localhost:3001/auth/reset-password', {
+        const res = await fetch(`${API}/auth/reset-password`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token, password: p1 })
@@ -325,9 +342,10 @@ export default class ResetPasswordScene extends Phaser.Scene {
 
         if (!res.ok || !payload?.ok) {
           const msg = payload?.error || `Błąd (${res.status})`;
-          errorMsg.innerText = msg === 'INVALID_TOKEN' ? 'Nieprawidłowy lub wygasły link.' :
-                               msg === 'WEAK_PASSWORD' ? 'Hasło nie spełnia wymagań.' :
-                               'Nie udało się zmienić hasła.';
+          errorMsg.innerText =
+            msg === 'INVALID_TOKEN' ? 'Nieprawidłowy lub wygasły link.' :
+            msg === 'WEAK_PASSWORD' ? 'Hasło nie spełnia wymagań.' :
+            'Nie udało się zmienić hasła.';
           try { this.sound.play('error', { volume: 0.9 }); } catch(_) {}
           return;
         }
@@ -344,7 +362,7 @@ export default class ResetPasswordScene extends Phaser.Scene {
           this.scene.stop('ResetPasswordScene');
         }, 800);
 
-      } catch (e) {
+      } catch {
         errorMsg.innerText = 'Brak połączenia z serwerem.';
         try { this.sound.play('error', { volume: 0.9 }); } catch(_) {}
       } finally {
@@ -357,24 +375,11 @@ export default class ResetPasswordScene extends Phaser.Scene {
     pass2Input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
     submitBtn.onclick = submit;
 
-    // złożenie formularza
     const form = document.createElement('div');
     form.className = 'form-container';
-    form.append(
-      title,
-      tokenInfo,
-      passWrapper,
-      pass2Wrapper,
-      errorMsg,
-      successMsg,
-      submitBtn,
-      spinner,
-      backToLogin
-    );
-
+    form.append(title, tokenInfo, passWrapper, pass2Wrapper, errorMsg, successMsg, submitBtn, spinner, backToLogin);
     if (ui) ui.appendChild(form);
 
-    // sprzątanie
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       try {
         if (this._onResizeMute) { this.scale.off('resize', this._onResizeMute); this._onResizeMute = null; }
@@ -383,9 +388,7 @@ export default class ResetPasswordScene extends Phaser.Scene {
           this._onGlobalMuteChanged = null;
         }
         unbindVisibility('ResetPasswordScene');
-
         this.muteBtn?.destroy(); this.muteBtn = null;
-
         this.video?.stop(); this.video?.destroy();
         if (this.ambient) { this.ambient.stop(); this.ambient.destroy(); this.ambient = null; }
         this.sound.removeByKey && this.sound.removeByKey('ambient');

@@ -1,9 +1,14 @@
 // src/scenes/RegisterScene.js
 import Phaser from 'phaser';
-import './LoginScene.css';
-import { safeResume, bindVisibility, unbindVisibility } from './audioSafe';
+import '../styles/LoginScene.css';
+import { safeResume, bindVisibility, unbindVisibility } from '../lib/audioSafe';
 
-// === Password rules (spójne z backendem) ===
+const API =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
+  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
+  'http://localhost:3001';
+
+
 const PW_RULES = { MIN_LEN: 8, MAX_LEN: 72 };
 const COMMON = new Set([
   '123456','123456789','12345678','password','qwerty','111111','abc123',
@@ -18,7 +23,7 @@ function validatePasswordFront(pw, { login, email } = {}) {
   if (pw.length > PW_RULES.MAX_LEN) issues.push('MAX_LEN');
   if (!/[a-z]/.test(pw)) issues.push('LOWERCASE_REQUIRED');
   if (!/[A-Z]/.test(pw)) issues.push('UPPERCASE_REQUIRED');
-  if (!/\d/.test(pw))    issues.push('DIGIT_REQUIRED');
+  if (!/\d/.test(pw)) issues.push('DIGIT_REQUIRED');
   if (!/[^A-Za-z0-9]/.test(pw)) issues.push('SPECIAL_REQUIRED');
 
   const lower = pw.toLowerCase();
@@ -27,8 +32,7 @@ function validatePasswordFront(pw, { login, email } = {}) {
   const loginLower = (login || '').toLowerCase();
   if (loginLower && lower.includes(loginLower)) issues.push('CONTAINS_LOGIN');
 
-  const emailLocal = (email || '').split('@')[0] || '';
-  const emailLocalLower = emailLocal.toLowerCase();
+  const emailLocalLower = ((email || '').split('@')[0] || '').toLowerCase();
   if (emailLocalLower && lower.includes(emailLocalLower)) issues.push('CONTAINS_EMAIL');
 
   return { ok: issues.length === 0, issues };
@@ -82,7 +86,7 @@ export default class RegisterScene extends Phaser.Scene {
     if (this.scene?.manager) {
       this.scene.manager.scenes.forEach(s => {
         if (s?.sys?.settings?.key && s.sys.settings.key !== 'RegisterScene') {
-          try { this.scene.stop(s.sys.settings.key); } catch (_) {}
+          try { this.scene.stop(s.sys.settings.key); } catch {}
         }
       });
     }
@@ -104,14 +108,14 @@ export default class RegisterScene extends Phaser.Scene {
     reg.events.on('changedata-globalMuted', this._onGlobalMuteChanged);
 
     this.ambient = this.sound.add('ambient', { loop: true, volume: 0.3 });
-    try { this.ambient.play(); } catch (_) {}
+    try { this.ambient.play(); } catch {}
 
-    const playSfx = (key, cfg) => { try { this.sound.play(key, cfg); } catch (_) {} };
-    this.input.on('pointerdown', () => playSfx('click', { volume: 0.8, detune: 50 }));
+    const sfx = (key, cfg) => { try { this.sound.play(key, cfg); } catch {} };
+    this.input.on('pointerdown', () => sfx('click', { volume: 0.8, detune: 50 }));
 
-    this.video = this.add.video(0, 0, 'bgVideo');
-    this.video.setMute(true).setLoop(true).play(true);
-    this.video.setDepth(-1).setDisplaySize(300, 150).setOrigin(0.5).setPosition(width/2, height/2);
+    this.video = this.add.video(0, 0, 'bgVideo')
+      .setMute(true).setLoop(true).play(true)
+      .setDepth(-1).setDisplaySize(300, 150).setOrigin(0.5).setPosition(width/2, height/2);
 
     const btnSize = 40, pad = 20;
     this.muteBtn = this.add.text(
@@ -119,10 +123,7 @@ export default class RegisterScene extends Phaser.Scene {
       this.scale.height - btnSize - pad,
       this.sound.mute ? '🔇' : '🔊',
       { fontFamily: 'Monaco, monospace', fontSize: '28px', color: '#FFFFFF' }
-    )
-      .setInteractive({ cursor: 'pointer' })
-      .setScrollFactor(0)
-      .setDepth(2000);
+    ).setInteractive({ cursor: 'pointer' }).setScrollFactor(0).setDepth(2000);
 
     this.muteBtn.on('pointerdown', (pointer) => {
       pointer?.event?.stopImmediatePropagation?.();
@@ -139,7 +140,6 @@ export default class RegisterScene extends Phaser.Scene {
     };
     this.scale.on('resize', this._onResizeMute);
 
-    // ===== UI rejestracji =====
     const ui = document.getElementById('login-ui');
     if (ui) ui.innerHTML = '';
 
@@ -174,46 +174,27 @@ export default class RegisterScene extends Phaser.Scene {
     });
     togglePass.onclick = () => { passInput.type = passInput.type === 'password' ? 'text' : 'password'; };
 
-    // === Dymek z wymaganiami hasła ===
     const pwTip = document.createElement('div');
     pwTip.className = 'pw-tooltip';
     Object.assign(pwTip.style, {
-      position: 'absolute',
-      top: '50%',
-      left: 'calc(100% + 10px)',
-      transform: 'translateY(-50%)',
-      background: '#1b0a2c',
-      border: '1px solid #8e4dff',
-      boxShadow: '0 10px 25px rgba(0,0,0,.35)',
-      borderRadius: '10px',
-      padding: '10px 12px',
-      color: '#fff',
-      fontFamily: 'Monaco, monospace',
-      fontSize: '12px',
-      width: '230px',
-      zIndex: '9999',
-      display: 'none',
+      position: 'absolute', top: '50%', left: 'calc(100% + 10px)', transform: 'translateY(-50%)',
+      background: '#1b0a2c', border: '1px solid #8e4dff', boxShadow: '0 10px 25px rgba(0,0,0,.35)',
+      borderRadius: '10px', padding: '10px 12px', color: '#fff', fontFamily: 'Monaco, monospace',
+      fontSize: '12px', width: '230px', zIndex: '9999', display: 'none',
     });
 
     const arrow = document.createElement('div');
     Object.assign(arrow.style, {
-      position: 'absolute',
-      left: '-6px',
-      top: '50%',
-      transform: 'translateY(-50%)',
+      position: 'absolute', left: '-6px', top: '50%', transform: 'translateY(-50%)',
       width: '0', height: '0',
-      borderTop: '6px solid transparent',
-      borderBottom: '6px solid transparent',
-      borderRight: '6px solid #8e4dff',
-      filter: 'drop-shadow(0 0 4px rgba(142,77,255,.6))'
+      borderTop: '6px solid transparent', borderBottom: '6px solid transparent',
+      borderRight: '6px solid #8e4dff', filter: 'drop-shadow(0 0 4px rgba(142,77,255,.6))'
     });
     pwTip.appendChild(arrow);
 
     const tipTitle = document.createElement('div');
     tipTitle.textContent = 'Wymagania hasła';
-    tipTitle.style.fontSize = '12px';
-    tipTitle.style.marginBottom = '6px';
-    tipTitle.style.textShadow = '0 0 6px #b983ff';
+    Object.assign(tipTitle.style, { fontSize: '12px', marginBottom: '6px', textShadow: '0 0 6px #b983ff' });
     pwTip.appendChild(tipTitle);
 
     const checklist = document.createElement('ul');
@@ -236,15 +217,8 @@ export default class RegisterScene extends Phaser.Scene {
     const infoBadge = document.createElement('span');
     infoBadge.textContent = 'ℹ️';
     Object.assign(infoBadge.style, {
-      position: 'absolute',
-      right: '38px',
-      top: '50%',
-      transform: 'translateY(-50%)',
-      fontSize: '14px',
-      color: '#b983ff',
-      cursor: 'pointer',
-      userSelect: 'none',
-      textShadow: '0 0 6px #a96fff'
+      position: 'absolute', right: '38px', top: '50%', transform: 'translateY(-50%)',
+      fontSize: '14px', color: '#b983ff', cursor: 'pointer', userSelect: 'none', textShadow: '0 0 6px #a96fff'
     });
 
     passWrapper.append(passInput, togglePass, infoBadge, pwTip);
@@ -268,18 +242,10 @@ export default class RegisterScene extends Phaser.Scene {
     togglePass2.onclick = () => { pass2Input.type = pass2Input.type === 'password' ? 'text' : 'password'; };
     pass2Wrapper.append(pass2Input, togglePass2);
 
-    // === NOWE: Akceptacja regulaminu ===
     const termsRow = document.createElement('label');
     Object.assign(termsRow.style, {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      fontFamily: 'Monaco, monospace',
-      fontSize: '12px',
-      color: '#fff',
-      marginTop: '6px',
-      userSelect: 'none',
-      lineHeight: '1.3'
+      display: 'flex', alignItems: 'center', gap: '10px',
+      fontFamily: 'Monaco, monospace', fontSize: '12px', color: '#fff', marginTop: '6px', userSelect: 'none'
     });
     const termsCheckbox = document.createElement('input');
     termsCheckbox.type = 'checkbox';
@@ -291,7 +257,6 @@ export default class RegisterScene extends Phaser.Scene {
     termsText.innerHTML = `Akceptuję <a href="/regulamin" target="_blank" rel="noopener" style="color:#b983ff;text-decoration:underline">regulamin</a> i <a href="/polityka-prywatnosci" target="_blank" rel="noopener" style="color:#b983ff;text-decoration:underline">politykę prywatności</a>.`;
     termsRow.append(termsCheckbox, termsText);
 
-    // komunikaty
     const errorMsg = document.createElement('div');
     errorMsg.className = 'error-message';
 
@@ -301,12 +266,10 @@ export default class RegisterScene extends Phaser.Scene {
     const submitBtn = document.createElement('button');
     submitBtn.className = 'login-button';
     submitBtn.innerText = 'UTWÓRZ KONTO';
-    // zablokuj, dopóki nie zaakceptuje regulaminu
     submitBtn.disabled = true;
     submitBtn.style.opacity = '.6';
     submitBtn.style.cursor = 'not-allowed';
 
-    // odblokowanie po zaznaczeniu
     const syncSubmitEnabled = () => {
       const on = termsCheckbox.checked;
       submitBtn.disabled = !on;
@@ -322,7 +285,7 @@ export default class RegisterScene extends Phaser.Scene {
     backToLogin.className = 'register-toggle-text';
     backToLogin.innerText = 'Masz konto? Zaloguj się';
     backToLogin.onclick = () => {
-      playSfx('click', { volume: 0.8, detune: 50 });
+      sfx('click', { volume: 0.8, detune: 50 });
       this.scene.start('LoginScene');
       this.scene.stop('RegisterScene');
     };
@@ -330,23 +293,11 @@ export default class RegisterScene extends Phaser.Scene {
     const form = document.createElement('div');
     form.className = 'form-container';
     form.append(
-      title,
-      loginInput,
-      emailInput,
-      passWrapper,
-      pass2Wrapper,
-      // ⬇️ nowy wiersz z regulaminem
-      termsRow,
-      errorMsg,
-      successMsg,
-      submitBtn,
-      spinner,
-      backToLogin
+      title, loginInput, emailInput, passWrapper, pass2Wrapper, termsRow,
+      errorMsg, successMsg, submitBtn, spinner, backToLogin
     );
     if (ui) ui.appendChild(form);
 
-    // ===== Walidacja, checklist i dymek =====
-    const isSubmitting = { value: false };
     const errorMap = {
       MISSING_FIELDS: 'Uzupełnij wszystkie pola.',
       BAD_EMAIL: 'Podaj prawidłowy adres e-mail.',
@@ -376,159 +327,105 @@ export default class RegisterScene extends Phaser.Scene {
 
     const positionTip = () => {
       if (window.innerWidth <= 720) {
-        Object.assign(pwTip.style, {
-          position: 'absolute',
-          left: '0',
-          top: 'calc(100% + 8px)',
-          transform: 'none',
-          width: 'min(92vw, 320px)',
+        Object.assign(pwTip.style, { position: 'absolute', left: '0', top: 'calc(100% + 8px)', transform: 'none', width: 'min(92vw, 320px)' });
+        Object.assign(arrow.style, {
+          left: '12px', top: '-6px', transform: 'none',
+          borderRight: '6px solid transparent', borderLeft: '6px solid transparent',
+          borderTop: 'none', borderBottom: '6px solid #8e4dff'
         });
-        arrow.style.left = '12px';
-        arrow.style.top = '-6px';
-        arrow.style.transform = 'none';
-        arrow.style.borderRight = '6px solid transparent';
-        arrow.style.borderLeft = '6px solid transparent';
-        arrow.style.borderTop = 'none';
-        arrow.style.borderBottom = '6px solid #8e4dff';
       } else {
-        Object.assign(pwTip.style, {
-          left: 'calc(100% + 10px)',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          width: '230px',
+        Object.assign(pwTip.style, { left: 'calc(100% + 10px)', top: '50%', transform: 'translateY(-50%)', width: '230px' });
+        Object.assign(arrow.style, {
+          left: '-6px', top: '50%', transform: 'translateY(-50%)',
+          borderBottom: '6px solid transparent', borderTop: '6px solid transparent',
+          borderRight: '6px solid #8e4dff', borderLeft: 'none'
         });
-        arrow.style.left = '-6px';
-        arrow.style.top = '50%';
-        arrow.style.transform = 'translateY(-50%)';
-        arrow.style.borderBottom = '6px solid transparent';
-        arrow.style.borderTop = '6px solid transparent';
-        arrow.style.borderRight = '6px solid #8e4dff';
-        arrow.style.borderLeft = 'none';
       }
     };
 
     passInput.addEventListener('focus', showTip);
     passInput.addEventListener('blur', hideTip);
     infoBadge.addEventListener('mouseenter', showTip);
-    infoBadge.addEventListener('mouseleave', () => {
-      if (document.activeElement !== passInput) hideTip();
-    });
-
+    infoBadge.addEventListener('mouseleave', () => { if (document.activeElement !== passInput) hideTip(); });
     window.addEventListener('resize', positionTip);
 
     passInput.addEventListener('input', () => renderPwIssues(passInput.value, liveCtx()));
     loginInput.addEventListener('input', () => renderPwIssues(passInput.value, liveCtx()));
     emailInput.addEventListener('input', () => renderPwIssues(passInput.value, liveCtx()));
-
     renderPwIssues('', liveCtx());
-    syncSubmitEnabled(); // inicjalne ustawienie przycisku
+    syncSubmitEnabled();
 
+    let submitting = false;
     const submit = async () => {
-      if (isSubmitting.value) return;
+      if (submitting) return;
 
       const login = loginInput.value.trim();
       const email = emailInput.value.trim();
       const pass1 = passInput.value;
       const pass2 = pass2Input.value;
+
       errorMsg.innerText = '';
       successMsg.innerText = '';
 
       const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!login || !email || !pass1 || !pass2) {
-        playSfx('error', { volume: 0.9 });
-        errorMsg.innerText = errorMap.MISSING_FIELDS;
-        return;
-      }
-      if (!emailRe.test(email)) {
-        playSfx('error', { volume: 0.9 });
-        errorMsg.innerText = errorMap.BAD_EMAIL;
-        return;
-      }
-
-      // NOWE: wymagana akceptacja regulaminu
-      if (!termsCheckbox.checked) {
-        playSfx('error', { volume: 0.9 });
-        errorMsg.innerText = 'Aby utworzyć konto, musisz zaakceptować regulamin.';
-        termsCheckbox.focus();
-        return;
-      }
+      if (!login || !email || !pass1 || !pass2) { sfx('error', { volume: 0.9 }); errorMsg.innerText = errorMap.MISSING_FIELDS; return; }
+      if (!emailRe.test(email)) { sfx('error', { volume: 0.9 }); errorMsg.innerText = errorMap.BAD_EMAIL; return; }
+      if (!termsCheckbox.checked) { sfx('error', { volume: 0.9 }); errorMsg.innerText = 'Aby utworzyć konto, musisz zaakceptować regulamin.'; termsCheckbox.focus(); return; }
 
       const localPw = validatePasswordFront(pass1, { login, email });
-      if (!localPw.ok) {
-        playSfx('error', { volume: 0.9 });
-        errorMsg.innerText = 'Hasło nie spełnia wymagań (zobacz dymek obok pola hasła).';
-        showTip();
-        renderPwIssues(pass1, { login, email });
-        return;
-      }
+      if (!localPw.ok) { sfx('error', { volume: 0.9 }); errorMsg.innerText = 'Hasło nie spełnia wymagań (zobacz dymek obok pola hasła).'; showTip(); renderPwIssues(pass1, { login, email }); return; }
+      if (pass1 !== pass2) { sfx('error', { volume: 0.9 }); errorMsg.innerText = 'Hasła muszą być takie same'; return; }
 
-      if (pass1 !== pass2) {
-        playSfx('error', { volume: 0.9 });
-        errorMsg.innerText = 'Hasła muszą być takie same';
-        return;
-      }
-
-      playSfx('click', { volume: 0.8, detune: 50 });
-      isSubmitting.value = true;
+      sfx('click', { volume: 0.8, detune: 50 });
+      submitting = true;
       spinner.classList.remove('hidden');
 
       try {
-        const res = await fetch('http://localhost:3001/register', {
+        const res = await fetch(`${API}/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ login, email, password: pass1 })
         });
 
         let payload = {};
-        try { payload = await res.json(); } catch (_) {}
+        try { payload = await res.json(); } catch {}
 
         if (!res.ok) {
           const code = payload?.error;
-
           if (code === 'WEAK_PASSWORD') {
             errorMsg.innerText = 'Hasło nie spełnia wymagań.';
-            const issues = Array.isArray(payload?.issues) ? payload.issues : [];
-            const unmet = new Set(issues);
+            const unmet = new Set(Array.isArray(payload?.issues) ? payload.issues : []);
             RULE_KEYS.forEach(k => {
-              const li = items[k];
-              if (!li) return;
+              const li = items[k]; if (!li) return;
               const ok = !unmet.has(k);
               li.innerHTML = `${ok ? '✅' : '❌'} ${ISSUE_LABEL[k] || k}`;
               li.style.opacity = ok ? '0.8' : '1';
             });
-            showTip();
-            playSfx('error', { volume: 0.9 });
-            return;
+            showTip(); sfx('error', { volume: 0.9 }); return;
           }
 
-          const msg =
-            (code && errorMap[code]) ||
-            (res.status === 409 ? errorMap.DUPLICATE : `Błąd (${res.status})`);
-          errorMsg.innerText = msg;
-          playSfx('error', { volume: 0.9 });
-          return;
+          const msg = (code && errorMap[code]) || (res.status === 409 ? errorMap.DUPLICATE : `Błąd (${res.status})`);
+          errorMsg.innerText = msg; sfx('error', { volume: 0.9 }); return;
         }
 
         successMsg.innerText = 'Konto utworzone! Przekierowuję do logowania…';
         localStorage.setItem('lastLogin', login);
-        playSfx('click', { volume: 0.8, detune: 50 });
+        sfx('click', { volume: 0.8, detune: 50 });
 
         setTimeout(() => {
           if (ui) ui.innerHTML = '';
           this.video?.stop(); this.video?.destroy();
           if (this.ambient) { this.ambient.stop(); this.ambient.destroy(); this.ambient = null; }
           this.sound.removeByKey && this.sound.removeByKey('ambient');
-
           this.scene.start('LoginScene');
           this.scene.stop('RegisterScene');
         }, 800);
-
-      } catch (_) {
+      } catch {
         errorMsg.innerText = 'Brak połączenia z serwerem.';
-        playSfx('error', { volume: 0.9 });
+        sfx('error', { volume: 0.9 });
       } finally {
         spinner.classList.add('hidden');
-        isSubmitting.value = false;
+        submitting = false;
       }
     };
 
@@ -537,33 +434,23 @@ export default class RegisterScene extends Phaser.Scene {
     });
     submitBtn.onclick = submit;
 
-    // Sprzątanie
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       try {
         window.removeEventListener('resize', positionTip);
         if (this._onResizeMute) { this.scale.off('resize', this._onResizeMute); this._onResizeMute = null; }
-        if (this._onGlobalMuteChanged) {
-          this.game.registry.events.off('changedata-globalMuted', this._onGlobalMuteChanged);
-          this._onGlobalMuteChanged = null;
-        }
-
+        if (this._onGlobalMuteChanged) { this.game.registry.events.off('changedata-globalMuted', this._onGlobalMuteChanged); this._onGlobalMuteChanged = null; }
         unbindVisibility('RegisterScene');
-
-        if (this._hideCssEl && this._hideCssEl.parentNode) {
-          this._hideCssEl.parentNode.removeChild(this._hideCssEl);
-          this._hideCssEl = null;
-        }
-
+        if (this._hideCssEl?.parentNode) this._hideCssEl.parentNode.removeChild(this._hideCssEl);
+        this._hideCssEl = null;
         this.muteBtn?.destroy(); this.muteBtn = null;
-
         this.video?.stop(); this.video?.destroy();
         if (this.ambient) { this.ambient.stop(); this.ambient.destroy(); this.ambient = null; }
         this.sound.removeByKey && this.sound.removeByKey('ambient');
-      } catch (_) {}
+      } catch {}
     });
 
     this.events.once(Phaser.Scenes.Events.DESTROY, () => {
-      try { if (this.ambient) { this.ambient.stop(); this.ambient.destroy(); this.ambient = null; } } catch (_) {}
+      try { if (this.ambient) { this.ambient.stop(); this.ambient.destroy(); this.ambient = null; } } catch {}
     });
   }
 }

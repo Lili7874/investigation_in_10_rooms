@@ -1,26 +1,27 @@
-// src/sidebar.js
+// src/Sidebar.js
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars, faCheckCircle, faLock } from '@fortawesome/free-solid-svg-icons';
-import './Sidebar.css';
+import './styles/Sidebar.css';
 import { LEVEL_KEYS } from './levels';
 
-const API = 'http://localhost:3001'; // backend
-const HIDE_ON_SCENES = new Set(['LoginScene', 'RegisterScene']);
+const API =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
+  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
+  'http://localhost:3001';
+
+const HIDE_ON_SCENES = new Set(['LoginScene', 'RegisterScene', 'ForgotPasswordScene', 'ResetPasswordScene']);
 
 function buildUnlockSet(completedNums, levelKeysObj) {
-  const levels = Object.keys(levelKeysObj).map(n => Number(n)).sort((a, b) => a - b);
+  const levels = Object.keys(levelKeysObj).map(Number).sort((a, b) => a - b);
   const completed = new Set(completedNums || []);
   const unlocked = new Set();
-
-  if (levels.length) unlocked.add(levels[0]); // pierwszy zawsze odblokowany
-  // łańcuszkowo — każdy po zaliczonym poprzednim
+  if (levels.length) unlocked.add(levels[0]);
   for (let i = 1; i < levels.length; i++) {
     const prev = levels[i - 1];
     const cur = levels[i];
     if (completed.has(prev)) unlocked.add(cur);
   }
-  // wszystkie zaliczone też są odblokowane
   completed.forEach(n => unlocked.add(n));
   return unlocked;
 }
@@ -30,17 +31,15 @@ const Sidebar = ({ completedLevels = [] }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [completed, setCompleted] = useState(completedLevels || []);
 
-  // synchronizacja z propsem
   useEffect(() => {
     if (Array.isArray(completedLevels)) setCompleted(completedLevels);
   }, [completedLevels]);
 
-  // zmiana sceny -> chowamy/pokazujemy
   const handleSceneChange = useCallback((e) => {
     const scene = e?.detail;
-    const shouldHide = HIDE_ON_SCENES.has(scene);
-    setIsVisible(!shouldHide);
-    if (shouldHide) {
+    const hidden = HIDE_ON_SCENES.has(scene);
+    setIsVisible(!hidden);
+    if (hidden) {
       setIsOpen(false);
       window.dispatchEvent(new CustomEvent('sidebarToggle', { detail: { open: false } }));
     }
@@ -53,9 +52,8 @@ const Sidebar = ({ completedLevels = [] }) => {
     return () => window.removeEventListener('sceneChange', handleSceneChange);
   }, [handleSceneChange]);
 
-  // po zapisie progresu (np. koniec poziomu) odśwież lokalny stan
   useEffect(() => {
-    const onProgressChanged = () => {
+    const refreshFromServer = () => {
       try {
         const user = JSON.parse(localStorage.getItem('user') || 'null');
         if (!user?.id) return;
@@ -66,21 +64,30 @@ const Sidebar = ({ completedLevels = [] }) => {
             const doneNums = data.progress
               .filter(p => !!p.completed)
               .map(p => {
-                const entry = Object.entries(LEVEL_KEYS).find(([num, key]) => key === p.levelKey);
+                const entry = Object.entries(LEVEL_KEYS).find(([, key]) => key === p.levelKey);
                 return entry ? Number(entry[0]) : null;
               })
               .filter(Boolean);
             setCompleted(doneNums);
           })
           .catch(() => {});
-      } catch (_) {}
+      } catch {}
     };
+
+    // Obsłuż obie nazwy eventów (stara i nowa)
+    const onProgressSaved = () => refreshFromServer();
+    const onProgressChanged = () => refreshFromServer();
+
+    window.addEventListener('progressSaved', onProgressSaved);
     window.addEventListener('progressChanged', onProgressChanged);
-    return () => window.removeEventListener('progressChanged', onProgressChanged);
+    return () => {
+      window.removeEventListener('progressSaved', onProgressSaved);
+      window.removeEventListener('progressChanged', onProgressChanged);
+    };
   }, []);
 
   const levels = useMemo(
-    () => Object.keys(LEVEL_KEYS).map(n => Number(n)).sort((a, b) => a - b),
+    () => Object.keys(LEVEL_KEYS).map(Number).sort((a, b) => a - b),
     []
   );
   const unlocked = useMemo(() => buildUnlockSet(completed, LEVEL_KEYS), [completed]);
@@ -93,7 +100,6 @@ const Sidebar = ({ completedLevels = [] }) => {
     });
   };
 
-  // ukryj cały sidebar na login/rejestracji
   if (!isVisible) return null;
 
   return (
@@ -115,7 +121,7 @@ const Sidebar = ({ completedLevels = [] }) => {
                 key={n}
                 className={!isUnlocked ? 'locked' : ''}
                 onClick={() => {
-                  if (!isUnlocked) return; // blokada
+                  if (!isUnlocked) return;
                   if (key) {
                     window.dispatchEvent(new CustomEvent('levelSelect', { detail: { key } }));
                     setIsOpen(false);
@@ -138,6 +144,8 @@ const Sidebar = ({ completedLevels = [] }) => {
         <button
           className="logout-btn"
           onClick={() => {
+            // (opcjonalnie) wyczyść dane sesji
+            // localStorage.removeItem('user');
             setIsOpen(false);
             window.dispatchEvent(new CustomEvent('sidebarToggle', { detail: { open: false } }));
             window.dispatchEvent(new CustomEvent('levelSelect', { detail: { key: 'LoginScene' } }));

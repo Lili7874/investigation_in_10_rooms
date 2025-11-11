@@ -12,7 +12,7 @@ Logika:
 • Rafał krzątał się między stolikami (fałszywy trop), ale nie miał kontaktu z barem/karafką; Alicja nie opuszczała sali na dłużej; Weronika nie wchodziła na zaplecze.
 */
 
-import BaseInvestigationScene from '../BaseInvestigationScene';
+import BaseInvestigationScene from './BaseInvestigationScene';
 import scenaRestauracja from '../assets/scenes/scena_restauracja.png';
 
 // postacie – mapowanie: Alicja, Michał, Weronika, Rafał, Jakub (świadek)

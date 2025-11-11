@@ -13,7 +13,7 @@ Logika:
 • Wybite okno to fałszywy trop sugerujący włamanie z zewnątrz – ukrywa fakt, że sprawca był już w środku.
 */
 
-import BaseInvestigationScene from '../BaseInvestigationScene';
+import BaseInvestigationScene from './BaseInvestigationScene';
 import scenaDomnawsi from '../assets/scenes/scena_dom_na_wsi.png';
 
 // postacie – mapowanie: Julia, Rafał, Piotr, Szymon, Michał (świadek)

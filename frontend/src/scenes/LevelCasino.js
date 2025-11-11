@@ -14,7 +14,7 @@ Logika:
 • Rafał (karta-as) i Julia (bar) mylą trop, ale nie spinają okna 01:17–01:22.
 */
 
-import BaseInvestigationScene from '../BaseInvestigationScene';
+import BaseInvestigationScene from './BaseInvestigationScene';
 import scenaKasyno from '../assets/scenes/scena_kasyno.png';
 
 // postacie 
