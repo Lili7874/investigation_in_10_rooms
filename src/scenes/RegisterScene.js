@@ -15,12 +15,6 @@ if (typeof window !== 'undefined') {
   console.log('[RegisterScene] API_BASE =', API);
 }
 
-const res = await fetch(`${API}/register`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ login, email, password: pass1 })
-});
-
 const PW_RULES = { MIN_LEN: 8, MAX_LEN: 72 };
 const COMMON = new Set([
   '123456','123456789','12345678','password','qwerty','111111','abc123',
