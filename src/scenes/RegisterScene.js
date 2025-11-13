@@ -1,17 +1,22 @@
-// src/scenes/RegisterScene.js
-import Phaser from 'phaser';
-import '../styles/LoginScene.css';
-import { safeResume, bindVisibility, unbindVisibility } from '../lib/audioSafe';
+// --- API base detection (robust) ---
+const isBrowser = typeof window !== 'undefined';
+const host = isBrowser ? window.location.hostname : '';
 
-// na samej górze pliku (zamiast Twojej stałej API)
+const isProdHosted =
+  /netlify\.app$/.test(host) ||              // Netlify prod
+  /netlify\.live$/.test(host) ||             // Netlify preview
+  /netlify\.dev$/.test(host);                // Netlify dev (czasem)
+
 const RAW_API =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
-  'http://localhost:3001';
+  (isProdHosted
+    ? 'https://investigation-in-10-rooms.onrender.com'  // twardy fallback na Render w prod
+    : 'http://localhost:3001');                         // lokalnie
 
-// usuń trailing slash i zaloguj w devtools
 const API = String(RAW_API).replace(/\/+$/, '');
-if (typeof window !== 'undefined') {
+
+if (isBrowser) {
   console.log('[RegisterScene] API_BASE =', API);
 }
 

@@ -12,38 +12,61 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(express.json({ limit: '1mb' }));
 
-// ---------- CORS ----------
-const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:5173';
-const ALLOWED_ORIGINS = String(process.env.ALLOWED_ORIGINS || '')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
+/* =====================================================
+   CORS
+   ===================================================== */
+
+const FRONTEND_BASE_URL =
+  process.env.FRONTEND_BASE_URL || 'http://localhost:5173';
+
+// Zbieramy whitelist z kilku źródeł:
+// - FRONTEND_BASE_URL
+// - twardy fallback na Netlify
+// - ALLOWED_ORIGINS z .env (przecinkami)
+const ALLOWED_ORIGINS = [
+  FRONTEND_BASE_URL,
+  'https://investigationin10rooms.netlify.app',
+  ...String(process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean),
+].filter(Boolean);
 
 const isLocalhost = (origin) =>
   /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin || '');
 
 const corsOptions = {
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // np. curl/Postman
+    if (!origin) return cb(null, true);          // curl/Postman / brak Origin
     if (isLocalhost(origin)) return cb(null, true);
     if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    console.warn('CORS blocked for origin:', origin);
     cb(new Error(`CORS blocked for origin: ${origin}`));
   },
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: false,
 };
-app.use(cors(corsOptions));
-app.use((req, res, next) => (req.method === 'OPTIONS' ? res.sendStatus(204) : next()));
 
-// ---------- Health ----------
+app.use(cors(corsOptions));
+app.use((req, res, next) =>
+  req.method === 'OPTIONS' ? res.sendStatus(204) : next()
+);
+
+/* =====================================================
+   Health
+   ===================================================== */
+
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
-// ---------- DB ----------
+/* =====================================================
+   DB (Railway)
+   ===================================================== */
+
 const db = mysql.createPool({
   host: process.env.DB_HOST || 'mysql.railway.internal',
-  port: Number(process.env.DB_PORT || 3306), // <-- ważne dla Railway (public proxy)
+  port: Number(process.env.DB_PORT || 3306),
   user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASS || 'bgBtGmcNCJbqOdUSAPyQodnulqcxkChm',
+  password: process.env.DB_PASS || '',      // hasło MUSI być w DB_PASS w ENV
   database: process.env.DB_NAME || 'railway',
   waitForConnections: true,
   connectionLimit: 10,
@@ -53,11 +76,16 @@ const db = mysql.createPool({
 
 app.get('/health/db', (_req, res) => {
   db.query('SELECT 1 AS ok', (err) =>
-    err ? res.status(500).json({ ok: false, error: 'DB_DOWN' }) : res.json({ ok: true })
+    err
+      ? res.status(500).json({ ok: false, error: 'DB_DOWN' })
+      : res.json({ ok: true })
   );
 });
 
-// ---------- Mailer ----------
+/* =====================================================
+   Mailer / reset hasła
+   ===================================================== */
+
 const RESET_TOKEN_TTL_MIN = Number(process.env.RESET_TOKEN_TTL_MIN || 30);
 const SMTP_HOST = process.env.SMTP_HOST || '';
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
@@ -91,7 +119,10 @@ async function getTransporter() {
   return transporter;
 }
 
-// ---------- Schema ----------
+/* =====================================================
+   Schema (auto-migracje)
+   ===================================================== */
+
 db.query('SELECT 1', (err) => {
   if (err) {
     console.error('❌ MySQL connection error:', err);
@@ -137,12 +168,20 @@ db.query('SELECT 1', (err) => {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
   `);
 
-  db.query('CREATE INDEX idx_level_time ON level_progress (level_key, best_time_ms)', (e) => {
-    if (e && e.errno !== 1061) console.warn('ℹ️ idx_level_time not created:', e.message);
-  });
+  db.query(
+    'CREATE INDEX idx_level_time ON level_progress (level_key, best_time_ms)',
+    (e) => {
+      if (e && e.errno !== 1061) {
+        console.warn('ℹ️ idx_level_time not created:', e.message);
+      }
+    }
+  );
 });
 
-// ---------- Helpers ----------
+/* =====================================================
+   Helpers
+   ===================================================== */
+
 const sanitize = (s) => (typeof s === 'string' ? s.trim() : '');
 const basicEmailOk = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -154,13 +193,15 @@ const COMMON_PASSWORDS = new Set([
 
 function validatePassword(password, { login, email } = {}) {
   const issues = [];
-  if (typeof password !== 'string' || password.length === 0) return { ok: false, issues: ['REQUIRED'] };
+  if (typeof password !== 'string' || password.length === 0) {
+    return { ok: false, issues: ['REQUIRED'] };
+  }
   if (/\s/.test(password)) issues.push('NO_SPACES');
   if (password.length < PASSWORD_RULES.MIN_LEN) issues.push('MIN_LEN');
   if (password.length > PASSWORD_RULES.MAX_LEN) issues.push('MAX_LEN');
   if (!/[a-z]/.test(password)) issues.push('LOWERCASE_REQUIRED');
   if (!/[A-Z]/.test(password)) issues.push('UPPERCASE_REQUIRED');
-  if (!/\d/.test(password))    issues.push('DIGIT_REQUIRED');
+  if (!/\d/.test(password)) issues.push('DIGIT_REQUIRED');
   if (!/[^A-Za-z0-9]/.test(password)) issues.push('SPECIAL_REQUIRED');
 
   const lower = password.toLowerCase();
@@ -170,40 +211,65 @@ function validatePassword(password, { login, email } = {}) {
   if (loginLower && lower.includes(loginLower)) issues.push('CONTAINS_LOGIN');
 
   const emailLocalLower = ((email || '').split('@')[0] || '').toLowerCase();
-  if (emailLocalLower && lower.includes(emailLocalLower)) issues.push('CONTAINS_EMAIL');
+  if (emailLocalLower && lower.includes(emailLocalLower)) {
+    issues.push('CONTAINS_EMAIL');
+  }
 
   return { ok: issues.length === 0, issues };
 }
 
-const sha256hex = (s) => crypto.createHash('sha256').update(s, 'utf8').digest('hex');
+const sha256hex = (s) =>
+  crypto.createHash('sha256').update(s, 'utf8').digest('hex');
+
 const toMySQLDateTime = (d) => {
   const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${
+    pad(d.getHours())
+  }:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 };
 
-// ---------- Auth: login ----------
+/* =====================================================
+   Auth: login
+   ===================================================== */
+
 app.post('/login', (req, res) => {
   let { login, password } = req.body || {};
   login = sanitize(login);
   password = sanitize(password);
-  if (!login || !password) return res.status(400).json({ message: 'Brak loginu lub hasła' });
+  if (!login || !password) {
+    return res.status(400).json({ message: 'Brak loginu lub hasła' });
+  }
 
-  db.query('SELECT id, login, email, password_hash FROM users WHERE login = ? LIMIT 1', [login], async (err, rows) => {
-    if (err) return res.status(500).json({ message: 'Błąd serwera' });
-    if (!rows?.length) return res.status(401).json({ message: 'Nieprawidłowy login' });
+  db.query(
+    'SELECT id, login, email, password_hash FROM users WHERE login = ? LIMIT 1',
+    [login],
+    async (err, rows) => {
+      if (err) return res.status(500).json({ message: 'Błąd serwera' });
+      if (!rows?.length) {
+        return res.status(401).json({ message: 'Nieprawidłowy login' });
+      }
 
-    const user = rows[0];
-    try {
-      const ok = await bcrypt.compare(password, user.password_hash);
-      if (!ok) return res.status(401).json({ message: 'Nieprawidłowe hasło' });
-      res.json({ message: 'Zalogowano', user: { id: user.id, login: user.login, email: user.email } });
-    } catch {
-      res.status(500).json({ message: 'Błąd serwera' });
+      const user = rows[0];
+      try {
+        const ok = await bcrypt.compare(password, user.password_hash);
+        if (!ok) {
+          return res.status(401).json({ message: 'Nieprawidłowe hasło' });
+        }
+        res.json({
+          message: 'Zalogowano',
+          user: { id: user.id, login: user.login, email: user.email },
+        });
+      } catch {
+        res.status(500).json({ message: 'Błąd serwera' });
+      }
     }
-  });
+  );
 });
 
-// ---------- Auth: register ----------
+/* =====================================================
+   Auth: register
+   ===================================================== */
+
 app.post('/register', async (req, res) => {
   try {
     let { login, email, password } = req.body || {};
@@ -211,96 +277,201 @@ app.post('/register', async (req, res) => {
     email = sanitize(email);
     password = typeof password === 'string' ? password : '';
 
-    if (!login || !email || !password) return res.status(400).json({ ok: false, error: 'MISSING_FIELDS' });
-    if (!basicEmailOk(email)) return res.status(400).json({ ok: false, error: 'BAD_EMAIL' });
+    if (!login || !email || !password) {
+      return res
+        .status(400)
+        .json({ ok: false, error: 'MISSING_FIELDS' });
+    }
+    if (!basicEmailOk(email)) {
+      return res.status(400).json({ ok: false, error: 'BAD_EMAIL' });
+    }
 
     const pw = validatePassword(password, { login, email });
-    if (!pw.ok) return res.status(400).json({ ok: false, error: 'WEAK_PASSWORD', issues: pw.issues, rules: { minLen: PASSWORD_RULES.MIN_LEN, maxLen: PASSWORD_RULES.MAX_LEN } });
+    if (!pw.ok) {
+      return res.status(400).json({
+        ok: false,
+        error: 'WEAK_PASSWORD',
+        issues: pw.issues,
+        rules: {
+          minLen: PASSWORD_RULES.MIN_LEN,
+          maxLen: PASSWORD_RULES.MAX_LEN,
+        },
+      });
+    }
 
-    db.query('SELECT id, login, email FROM users WHERE login = ? OR email = ? LIMIT 1', [login, email], async (err, rows) => {
-      if (err) return res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
+    db.query(
+      'SELECT id, login, email FROM users WHERE login = ? OR email = ? LIMIT 1',
+      [login, email],
+      async (err, rows) => {
+        if (err) {
+          return res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
+        }
 
-      if (rows?.length) {
-        const row = rows[0];
-        if (row.login === login) return res.status(409).json({ ok: false, error: 'LOGIN_TAKEN' });
-        if (row.email === email) return res.status(409).json({ ok: false, error: 'EMAIL_TAKEN' });
-      }
-
-      try {
-        const hash = await bcrypt.hash(password, 10);
-        db.query('INSERT INTO users (login, email, password_hash) VALUES (?, ?, ?)', [login, email, hash], (e, result) => {
-          if (e) {
-            if (e.code === 'ER_DUP_ENTRY') {
-              const msg = e.sqlMessage || '';
-              if (msg.includes('login')) return res.status(409).json({ ok: false, error: 'LOGIN_TAKEN' });
-              if (msg.includes('email')) return res.status(409).json({ ok: false, error: 'EMAIL_TAKEN' });
-              return res.status(409).json({ ok: false, error: 'DUPLICATE' });
-            }
-            return res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
+        if (rows?.length) {
+          const row = rows[0];
+          if (row.login === login) {
+            return res
+              .status(409)
+              .json({ ok: false, error: 'LOGIN_TAKEN' });
           }
-          res.status(201).json({ ok: true, id: result.insertId });
-        });
-      } catch {
-        res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
+          if (row.email === email) {
+            return res
+              .status(409)
+              .json({ ok: false, error: 'EMAIL_TAKEN' });
+          }
+        }
+
+        try {
+          const hash = await bcrypt.hash(password, 10);
+          db.query(
+            'INSERT INTO users (login, email, password_hash) VALUES (?, ?, ?)',
+            [login, email, hash],
+            (e, result) => {
+              if (e) {
+                if (e.code === 'ER_DUP_ENTRY') {
+                  const msg = e.sqlMessage || '';
+                  if (msg.includes('login')) {
+                    return res
+                      .status(409)
+                      .json({ ok: false, error: 'LOGIN_TAKEN' });
+                  }
+                  if (msg.includes('email')) {
+                    return res
+                      .status(409)
+                      .json({ ok: false, error: 'EMAIL_TAKEN' });
+                  }
+                  return res
+                    .status(409)
+                    .json({ ok: false, error: 'DUPLICATE' });
+                }
+                return res
+                  .status(500)
+                  .json({ ok: false, error: 'SERVER_ERROR' });
+              }
+              res.status(201).json({ ok: true, id: result.insertId });
+            }
+          );
+        } catch {
+          res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
+        }
       }
-    });
+    );
   } catch {
     res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
   }
 });
 
-// ---------- Password reset: request ----------
+/* =====================================================
+   Password reset: request
+   ===================================================== */
+
 async function requestResetHandler(req, res) {
-  const loginOrEmail = sanitize(req.body?.loginOrEmail || req.body?.identifier || '');
-  if (!loginOrEmail) return res.status(400).json({ ok: false, error: 'MISSING_FIELDS' });
+  const loginOrEmail = sanitize(
+    req.body?.loginOrEmail || req.body?.identifier || ''
+  );
+  if (!loginOrEmail) {
+    return res.status(400).json({ ok: false, error: 'MISSING_FIELDS' });
+  }
 
-  db.query('SELECT id, email, login FROM users WHERE login = ? OR email = ? LIMIT 1', [loginOrEmail, loginOrEmail], async (err, rows) => {
-    if (err) return res.json({ ok: true, message: 'Jeśli konto istnieje, wyślemy link do resetu hasła.' });
-    if (!rows?.length) return res.json({ ok: true, message: 'Jeśli konto istnieje, wyślemy link do resetu hasła.' });
-
-    const user = rows[0];
-    const token = crypto.randomBytes(32).toString('hex');
-    const tokenHash = sha256hex(token);
-    const expiresAt = toMySQLDateTime(new Date(Date.now() + RESET_TOKEN_TTL_MIN * 60 * 1000));
-
-    db.query('INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, ?)', [user.id, tokenHash, expiresAt], async (e2) => {
-      if (e2) return res.json({ ok: true, message: 'Jeśli konto istnieje, wyślemy link do resetu hasła.' });
-
-      const resetLink = `${FRONTEND_BASE_URL}/?scene=ResetPasswordScene&token=${token}`;
-      const html = `
-        <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222">
-          <p>Witaj ${user.login},</p>
-          <p>Aby ustawić nowe hasło, kliknij:</p>
-          <p><a href="${resetLink}">${resetLink}</a></p>
-          <p>Link wygaśnie za ${RESET_TOKEN_TTL_MIN} minut.</p>
-        </div>
-      `;
-
-      try {
-        const tx = await getTransporter();
-        const info = await tx.sendMail({ from: SMTP_FROM, to: user.email, subject: 'Reset hasła — Śledztwo w 10 pokojach', html });
-        const preview = nodemailer.getTestMessageUrl(info);
-        if (preview) console.log('📬 Podgląd maila (Ethereal):', preview);
-      } catch (mailErr) {
-        console.error('❌ Mail error:', mailErr);
-        console.log('🔗 [DEV] Link resetu (fallback):', resetLink);
+  db.query(
+    'SELECT id, email, login FROM users WHERE login = ? OR email = ? LIMIT 1',
+    [loginOrEmail, loginOrEmail],
+    async (err, rows) => {
+      if (err) {
+        return res.json({
+          ok: true,
+          message: 'Jeśli konto istnieje, wyślemy link do resetu hasła.',
+        });
+      }
+      if (!rows?.length) {
+        return res.json({
+          ok: true,
+          message: 'Jeśli konto istnieje, wyślemy link do resetu hasła.',
+        });
       }
 
-      res.json({ ok: true, message: 'Jeśli konto istnieje, wyślemy link do resetu hasła.' });
-    });
-  });
+      const user = rows[0];
+      const token = crypto.randomBytes(32).toString('hex');
+      const tokenHash = sha256hex(token);
+      const expiresAt = toMySQLDateTime(
+        new Date(Date.now() + RESET_TOKEN_TTL_MIN * 60 * 1000)
+      );
+
+      db.query(
+        'INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
+        [user.id, tokenHash, expiresAt],
+        async (e2) => {
+          if (e2) {
+            return res.json({
+              ok: true,
+              message: 'Jeśli konto istnieje, wyślemy link do resetu hasła.',
+            });
+          }
+
+          const resetLink = `${FRONTEND_BASE_URL}/?scene=ResetPasswordScene&token=${token}`;
+          const html = `
+            <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222">
+              <p>Witaj ${user.login},</p>
+              <p>Aby ustawić nowe hasło, kliknij:</p>
+              <p><a href="${resetLink}">${resetLink}</a></p>
+              <p>Link wygaśnie za ${RESET_TOKEN_TTL_MIN} minut.</p>
+            </div>
+          `;
+
+          try {
+            const tx = await getTransporter();
+            const info = await tx.sendMail({
+              from: SMTP_FROM,
+              to: user.email,
+              subject: 'Reset hasła — Śledztwo w 10 pokojach',
+              html,
+            });
+            const preview = nodemailer.getTestMessageUrl(info);
+            if (preview) {
+              console.log('📬 Podgląd maila (Ethereal):', preview);
+            }
+          } catch (mailErr) {
+            console.error('❌ Mail error:', mailErr);
+            console.log('🔗 [DEV] Link resetu (fallback):', resetLink);
+          }
+
+          res.json({
+            ok: true,
+            message: 'Jeśli konto istnieje, wyślemy link do resetu hasła.',
+          });
+        }
+      );
+    }
+  );
 }
+
 app.post('/auth/request-reset', requestResetHandler);
 app.post('/password/forgot', requestResetHandler);
 
-// ---------- Password reset: confirm ----------
+/* =====================================================
+   Password reset: confirm
+   ===================================================== */
+
 app.post('/auth/reset-password', async (req, res) => {
   const token = req.body?.token || '';
-  const password = typeof req.body?.password === 'string' ? req.body.password : '';
-  if (!token || !password) return res.status(400).json({ ok: false, error: 'MISSING_FIELDS' });
+  const password =
+    typeof req.body?.password === 'string' ? req.body.password : '';
+  if (!token || !password) {
+    return res.status(400).json({ ok: false, error: 'MISSING_FIELDS' });
+  }
 
   const pw = validatePassword(password);
-  if (!pw.ok) return res.status(400).json({ ok: false, error: 'WEAK_PASSWORD', issues: pw.issues, rules: { minLen: PASSWORD_RULES.MIN_LEN, maxLen: PASSWORD_RULES.MAX_LEN } });
+  if (!pw.ok) {
+    return res.status(400).json({
+      ok: false,
+      error: 'WEAK_PASSWORD',
+      issues: pw.issues,
+      rules: {
+        minLen: PASSWORD_RULES.MIN_LEN,
+        maxLen: PASSWORD_RULES.MAX_LEN,
+      },
+    });
+  }
 
   const tokenHash = sha256hex(token);
 
@@ -312,17 +483,31 @@ app.post('/auth/reset-password', async (req, res) => {
     [tokenHash],
     async (err, rows) => {
       if (err) return res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
-      if (!rows?.length) return res.status(400).json({ ok: false, error: 'INVALID_TOKEN' });
+      if (!rows?.length) {
+        return res.status(400).json({ ok: false, error: 'INVALID_TOKEN' });
+      }
 
       const userId = rows[0].userId;
       try {
         const hash = await bcrypt.hash(password, 10);
-        db.query('UPDATE users SET password_hash = ? WHERE id = ?', [hash, userId], (e2) => {
-          if (e2) return res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
-          db.query('DELETE FROM password_resets WHERE user_id = ?', [userId], () => {
-            res.json({ ok: true, message: 'Hasło zostało zmienione.' });
-          });
-        });
+        db.query(
+          'UPDATE users SET password_hash = ? WHERE id = ?',
+          [hash, userId],
+          (e2) => {
+            if (e2) {
+              return res
+                .status(500)
+                .json({ ok: false, error: 'SERVER_ERROR' });
+            }
+            db.query(
+              'DELETE FROM password_resets WHERE user_id = ?',
+              [userId],
+              () => {
+                res.json({ ok: true, message: 'Hasło zostało zmienione.' });
+              }
+            );
+          }
+        );
       } catch {
         res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
       }
@@ -330,7 +515,10 @@ app.post('/auth/reset-password', async (req, res) => {
   );
 });
 
-// ---------- Progress ----------
+/* =====================================================
+   Progress / Leaderboard
+   ===================================================== */
+
 app.post('/progress', (req, res) => {
   let { userId, levelKey, timeMs, completed } = req.body || {};
   userId = Number(userId) || 0;
@@ -338,7 +526,9 @@ app.post('/progress', (req, res) => {
   timeMs = Number(timeMs);
   completed = Number(completed ? 1 : 0);
 
-  if (!userId || !levelKey) return res.status(400).json({ ok: false, error: 'MISSING_FIELDS' });
+  if (!userId || !levelKey) {
+    return res.status(400).json({ ok: false, error: 'MISSING_FIELDS' });
+  }
   if (!Number.isFinite(timeMs) || timeMs < 0) timeMs = null;
 
   const sql = `
@@ -358,7 +548,9 @@ app.post('/progress', (req, res) => {
   `;
 
   db.query(sql, [userId, levelKey, completed, timeMs], (err) => {
-    if (err) return res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
+    if (err) {
+      return res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
+    }
 
     db.query(
       'SELECT completed, best_time_ms, updated_at FROM level_progress WHERE user_id = ? AND level_key = ? LIMIT 1',
@@ -370,7 +562,7 @@ app.post('/progress', (req, res) => {
           ok: true,
           levelKey,
           completed: row ? !!row.completed : !!completed,
-          bestTimeMs: row ? row.best_time_ms : (timeMs ?? null),
+          bestTimeMs: row ? row.best_time_ms : timeMs ?? null,
           updatedAt: row ? row.updated_at : null,
         });
       }
@@ -380,13 +572,17 @@ app.post('/progress', (req, res) => {
 
 app.get('/progress/:userId', (req, res) => {
   const userId = Number(req.params.userId) || 0;
-  if (!userId) return res.status(400).json({ ok: false, error: 'BAD_USER_ID' });
+  if (!userId) {
+    return res.status(400).json({ ok: false, error: 'BAD_USER_ID' });
+  }
 
   db.query(
     'SELECT level_key AS levelKey, completed, best_time_ms AS bestTimeMs, updated_at AS updatedAt FROM level_progress WHERE user_id = ? ORDER BY level_key',
     [userId],
     (err, rows) => {
-      if (err) return res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
+      if (err) {
+        return res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
+      }
       res.json({ ok: true, progress: rows || [] });
     }
   );
@@ -395,21 +591,31 @@ app.get('/progress/:userId', (req, res) => {
 app.get('/best-time', (req, res) => {
   const userId = Number(req.query.userId) || 0;
   const levelKey = sanitize(req.query.levelKey || '');
-  if (!userId || !levelKey) return res.status(400).json({ ok: false, error: 'MISSING_FIELDS' });
+  if (!userId || !levelKey) {
+    return res.status(400).json({ ok: false, error: 'MISSING_FIELDS' });
+  }
 
   db.query(
     'SELECT best_time_ms AS bestTimeMs FROM level_progress WHERE user_id = ? AND level_key = ? LIMIT 1',
     [userId, levelKey],
     (err, rows) => {
-      if (err) return res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
-      res.json({ ok: true, levelKey, bestTimeMs: rows?.[0]?.bestTimeMs ?? null });
+      if (err) {
+        return res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
+      }
+      res.json({
+        ok: true,
+        levelKey,
+        bestTimeMs: rows?.[0]?.bestTimeMs ?? null,
+      });
     }
   );
 });
 
 app.get('/leaderboard/:levelKey', (req, res) => {
   const levelKey = sanitize(req.params.levelKey || '');
-  if (!levelKey) return res.status(400).json({ ok: false, error: 'BAD_LEVEL_KEY' });
+  if (!levelKey) {
+    return res.status(400).json({ ok: false, error: 'BAD_LEVEL_KEY' });
+  }
 
   const sql = `
     SELECT u.login, lp.best_time_ms, lp.updated_at
@@ -422,15 +628,24 @@ app.get('/leaderboard/:levelKey', (req, res) => {
     LIMIT 5
   `;
   db.query(sql, [levelKey], (err, rows) => {
-    if (err) return res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
-    const leaderboard = (rows || []).map((r, i) => ({ rank: i + 1, login: r.login, bestTimeMs: r.best_time_ms, updatedAt: r.updated_at }));
+    if (err) {
+      return res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
+    }
+    const leaderboard = (rows || []).map((r, i) => ({
+      rank: i + 1,
+      login: r.login,
+      bestTimeMs: r.best_time_ms,
+      updatedAt: r.updated_at,
+    }));
     res.json({ ok: true, leaderboard });
   });
 });
 
 app.get('/leaderboard', (req, res) => {
   const levelKey = sanitize(req.query.levelKey || '');
-  if (!levelKey) return res.status(400).json({ ok: false, error: 'BAD_LEVEL_KEY' });
+  if (!levelKey) {
+    return res.status(400).json({ ok: false, error: 'BAD_LEVEL_KEY' });
+  }
 
   const sql = `
     SELECT u.login, lp.best_time_ms, lp.updated_at
@@ -443,12 +658,24 @@ app.get('/leaderboard', (req, res) => {
     LIMIT 5
   `;
   db.query(sql, [levelKey], (err, rows) => {
-    if (err) return res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
-    const leaderboard = (rows || []).map((r, i) => ({ rank: i + 1, login: r.login, bestTimeMs: r.best_time_ms, updatedAt: r.updated_at }));
+    if (err) {
+      return res.status(500).json({ ok: false, error: 'SERVER_ERROR' });
+    }
+    const leaderboard = (rows || []).map((r, i) => ({
+      rank: i + 1,
+      login: r.login,
+      bestTimeMs: r.best_time_ms,
+      updatedAt: r.updated_at,
+    }));
     res.json({ ok: true, leaderboard });
   });
 });
 
-// ---------- Start ----------
+/* =====================================================
+   Start
+   ===================================================== */
+
 const PORT = Number(process.env.PORT || 3001);
-app.listen(PORT, () => console.log(`✅ API: https://investigationin10rooms.netlify.app`));
+app.listen(PORT, () => {
+  console.log(`✅ API listening on :${PORT}`);
+});
