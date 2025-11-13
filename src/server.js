@@ -58,28 +58,19 @@ app.use((req, res, next) =>
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
-/* =====================================================
-   DB (Railway)
-   ===================================================== */
-
+// ---------- DB ----------
 const db = mysql.createPool({
-  host: process.env.DB_HOST || 'mysql.railway.internal',
+  host: process.env.DB_HOST || 'localhost',          // ❗ JUŻ NIE mysql.railway.internal
   port: Number(process.env.DB_PORT || 3306),
   user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASS || '',      // hasło MUSI być w DB_PASS w ENV
-  database: process.env.DB_NAME || 'railway',
+  password: process.env.DB_PASS || '',
+  database: process.env.DB_NAME || 'sledztwo_w_10_pokojach',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
   dateStrings: true,
-});
-
-app.get('/health/db', (_req, res) => {
-  db.query('SELECT 1 AS ok', (err) =>
-    err
-      ? res.status(500).json({ ok: false, error: 'DB_DOWN' })
-      : res.json({ ok: true })
-  );
+  // przy Railway publicznie zwykle trzeba SSL:
+  ssl: { rejectUnauthorized: false }
 });
 
 /* =====================================================
