@@ -3,11 +3,32 @@ import Phaser from 'phaser';
 import '../styles/LoginScene.css';
 import { safeResume, bindVisibility, unbindVisibility } from '../lib/audioSafe';
 
-const API =
-  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
-  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
-  'http://localhost:3001';
+/* =========================
+   API base detection (jak w Login/Register/LevelSelect)
+   ========================= */
+const isBrowser = typeof window !== 'undefined';
+const host = isBrowser ? window.location.hostname : '';
 
+const isProdHosted =
+  /netlify\.app$/.test(host) ||      // Netlify prod
+  /netlify\.live$/.test(host) ||     // Netlify preview
+  /netlify\.dev$/.test(host);        // Netlify dev
+
+const RAW_API =
+  (typeof import.meta !== 'undefined' &&
+    import.meta.env &&
+    import.meta.env.VITE_API_BASE) ||
+  (typeof process !== 'undefined' &&
+    process.env &&
+    process.env.REACT_APP_API_BASE) ||
+  (isProdHosted
+    ? 'https://investigation-in-10-rooms.onrender.com' // Render w produkcji
+    : 'http://localhost:3001');                         // lokalnie
+
+const API = String(RAW_API).replace(/\/+$/, '');
+if (isBrowser) {
+  console.log('[ResetPasswordScene] API_BASE =', API);
+}
 
 export default class ResetPasswordScene extends Phaser.Scene {
   constructor() {
@@ -96,7 +117,7 @@ export default class ResetPasswordScene extends Phaser.Scene {
     const title = document.createElement('h1');
     title.innerText = 'Ustaw nowe hasło';
 
-    // ⬇️ Token: query (?token= / ?resetToken=) oraz fragment (#token= / #resetToken=)
+    // Token z query (?token= / ?resetToken=) albo z hash (#token= ...)
     const params = new URLSearchParams(window.location.search);
     let token = params.get('token') || params.get('resetToken') || '';
     if (!token && window.location.hash) {
@@ -163,14 +184,15 @@ export default class ResetPasswordScene extends Phaser.Scene {
       </ul>
     `;
 
-    // ℹ️ Mobilny toggle dymka (na dotyku nie ma hovera)
+    // ℹ️ Mobilny toggle dymka
     const infoTap = document.createElement('span');
     infoTap.textContent = 'ℹ️';
     infoTap.setAttribute('role', 'button');
     infoTap.setAttribute('aria-label', 'Pokaż wymagania hasła');
     Object.assign(infoTap.style, {
       position: 'absolute', right: '38px', top: '50%', transform: 'translateY(-50%)',
-      fontSize: '14px', color: '#b983ff', cursor: 'pointer', userSelect: 'none', textShadow: '0 0 6px #a96fff', zIndex: 6
+      fontSize: '14px', color: '#b983ff', cursor: 'pointer', userSelect: 'none',
+      textShadow: '0 0 6px #a96fff', zIndex: 6
     });
     let hintOpen = false;
     infoTap.onclick = () => {
@@ -181,9 +203,20 @@ export default class ResetPasswordScene extends Phaser.Scene {
 
     const strength = document.createElement('div');
     strength.className = 'password-strength';
-    Object.assign(strength.style, { marginTop: '6px', height: '6px', background: 'rgba(255,255,255,.1)', borderRadius: '6px', overflow: 'hidden' });
+    Object.assign(strength.style, {
+      marginTop: '6px',
+      height: '6px',
+      background: 'rgba(255,255,255,.1)',
+      borderRadius: '6px',
+      overflow: 'hidden'
+    });
     const strengthBar = document.createElement('div');
-    Object.assign(strengthBar.style, { height: '100%', width: '0%', transition: 'width .25s', background: '#8e4dff' });
+    Object.assign(strengthBar.style, {
+      height: '100%',
+      width: '0%',
+      transition: 'width .25s',
+      background: '#8e4dff'
+    });
     strength.appendChild(strengthBar);
 
     passWrapper.append(passInput, togglePass, infoTap, hint, strength);
@@ -220,7 +253,7 @@ export default class ResetPasswordScene extends Phaser.Scene {
     const submitBtn = document.createElement('button');
     submitBtn.className = 'login-button';
     submitBtn.innerText = 'Zmień hasło';
-    // ⬇️ Zablokuj przycisk, gdy nie ma tokenu
+    // zablokuj przycisk, gdy nie ma tokenu
     submitBtn.disabled = !token;
     submitBtn.style.opacity = token ? '1' : '.6';
     submitBtn.style.cursor  = token ? 'pointer' : 'not-allowed';
@@ -377,7 +410,17 @@ export default class ResetPasswordScene extends Phaser.Scene {
 
     const form = document.createElement('div');
     form.className = 'form-container';
-    form.append(title, tokenInfo, passWrapper, pass2Wrapper, errorMsg, successMsg, submitBtn, spinner, backToLogin);
+    form.append(
+      title,
+      tokenInfo,
+      passWrapper,
+      pass2Wrapper,
+      errorMsg,
+      successMsg,
+      submitBtn,
+      spinner,
+      backToLogin
+    );
     if (ui) ui.appendChild(form);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {

@@ -3,11 +3,33 @@ import Phaser from 'phaser';
 import '../styles/GameScene.css';
 import { safeResume, bindVisibility, unbindVisibility } from '../lib/audioSafe';
 
-const API =
-  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
-  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
-  'http://localhost:3001';
+/* =========================
+   API base detection (spójne z innymi scenami)
+   ========================= */
+const isBrowser = typeof window !== 'undefined';
+const host = isBrowser ? window.location.hostname : '';
 
+const isProdHosted =
+  /netlify\.app$/.test(host) ||      // Netlify prod
+  /netlify\.live$/.test(host) ||     // Netlify preview
+  /netlify\.dev$/.test(host);        // Netlify dev
+
+const RAW_API =
+  (typeof import.meta !== 'undefined' &&
+    import.meta.env &&
+    import.meta.env.VITE_API_BASE) ||
+  (typeof process !== 'undefined' &&
+    process.env &&
+    process.env.REACT_APP_API_BASE) ||
+  (isProdHosted
+    ? 'https://investigation-in-10-rooms.onrender.com' // Render w produkcji
+    : 'http://localhost:3001');                         // lokalnie
+
+const API = String(RAW_API).replace(/\/+$/, '');
+
+if (isBrowser) {
+  console.log('[BaseInvestigationScene] API_BASE =', API);
+}
 
 export default class BaseInvestigationScene extends Phaser.Scene {
   constructor(key, cfg) {
@@ -610,7 +632,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     const dlSus = document.createElement('datalist'); dlSus.id = 'dl-suspects';
     suspects.forEach(s => { const o = document.createElement('option'); o.value = s; dlSus.appendChild(o); });
     const dlItm = document.createElement('datalist'); dlItm.id = 'dl-items';
-    items.forEach(s => { const o = document.createElement('option'); o.value = s; dlItm.appendChild(o); });
+    items.forEach(s => { const o = document.create('option'); o.value = s; dlItm.appendChild(o); });
     const dlPlc = document.createElement('datalist'); dlPlc.id = 'dl-places';
     places.forEach(s => { const o = document.createElement('option'); o.value = s; dlPlc.appendChild(o); });
 
@@ -659,7 +681,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
     nextBtn.addEventListener('click', () => showPage(this._dbState.page + 1));
 
     this._dbKeyHandler = (e) => {
-      const tag = ((e.target && e.target.tagName) || '').toLowerCase(); // ← dodane nawiasy
+      const tag = ((e.target && e.target.tagName) || '').toLowerCase();
       if (tag === 'input' || tag === 'textarea') return;
       if (e.key === 'ArrowLeft') showPage(this._dbState.page - 1);
       if (e.key === 'ArrowRight') showPage(this._dbState.page + 1);

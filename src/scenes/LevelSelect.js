@@ -3,10 +3,33 @@ import Phaser from 'phaser';
 import { LEVEL_KEYS } from '../levels';
 import { safeResume, bindVisibility, unbindVisibility } from '../lib/audioSafe';
 
-const API =
-  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
-  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
-  'http://localhost:3001';
+/* =========================
+   API base detection (spójne z Login/Register)
+   ========================= */
+const isBrowser = typeof window !== 'undefined';
+const host = isBrowser ? window.location.hostname : '';
+
+const isProdHosted =
+  /netlify\.app$/.test(host) ||      // Netlify prod
+  /netlify\.live$/.test(host) ||     // Netlify preview
+  /netlify\.dev$/.test(host);        // Netlify dev
+
+const RAW_API =
+  (typeof import.meta !== 'undefined' &&
+    import.meta.env &&
+    import.meta.env.VITE_API_BASE) ||
+  (typeof process !== 'undefined' &&
+    process.env &&
+    process.env.REACT_APP_API_BASE) ||
+  (isProdHosted
+    ? 'https://investigation-in-10-rooms.onrender.com' // fallback na Render w produkcji
+    : 'http://localhost:3001');                         // lokalnie
+
+const API = String(RAW_API).replace(/\/+$/, '');
+
+if (isBrowser) {
+  console.log('[LevelSelect] API_BASE =', API);
+}
 
 export default class LevelSelect extends Phaser.Scene {
   constructor() {
@@ -31,6 +54,7 @@ export default class LevelSelect extends Phaser.Scene {
     try { const raw = localStorage.getItem('user'); return raw ? JSON.parse(raw) : null; }
     catch { return null; }
   }
+
   async _fetchProgress(userId) {
     try {
       const res = await fetch(`${API}/progress/${userId}`);
@@ -42,12 +66,14 @@ export default class LevelSelect extends Phaser.Scene {
       return [];
     }
   }
+
   _numFromKey(levelKey) {
     // LEVEL_KEYS: { 1:'LevelOffice', 2:'LevelRestaurant', ... }
     const entries = Object.entries(LEVEL_KEYS);
     const found = entries.find(([n, k]) => k === levelKey);
     return found ? Number(found[0]) : null;
   }
+
   _computeUnlocked() {
     // zasada: 1 zawsze odblokowany; n>1 odblokowany, jeśli (n-1) jest completed
     const nums = [...this._rowsByNum.keys()].sort((a,b)=>a-b);
@@ -58,6 +84,7 @@ export default class LevelSelect extends Phaser.Scene {
     });
     this._unlockedNums = unlocked;
   }
+
   _applyVisualState() {
     // odśwież wygląd i interaktywność wierszy
     this._rowsByNum.forEach((row, n) => {
@@ -101,6 +128,7 @@ export default class LevelSelect extends Phaser.Scene {
       }
     });
   }
+
   _startLevel(n) {
     try { this.sound.play('click', { volume: 0.8, detune: 50 }); } catch (_) {}
     const key = LEVEL_KEYS[n];

@@ -3,11 +3,33 @@ import Phaser from 'phaser';
 import '../styles/LoginScene.css';
 import { safeResume, bindVisibility, unbindVisibility } from '../lib/audioSafe';
 
-const API =
-  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
-  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
-  'http://localhost:3001';
+/* =========================
+   API base detection (spójne z RegisterScene)
+   ========================= */
+const isBrowser = typeof window !== 'undefined';
+const host = isBrowser ? window.location.hostname : '';
 
+const isProdHosted =
+  /netlify\.app$/.test(host) ||      // Netlify prod
+  /netlify\.live$/.test(host) ||     // Netlify preview
+  /netlify\.dev$/.test(host);        // Netlify dev
+
+const RAW_API =
+  (typeof import.meta !== 'undefined' &&
+    import.meta.env &&
+    import.meta.env.VITE_API_BASE) ||
+  (typeof process !== 'undefined' &&
+    process.env &&
+    process.env.REACT_APP_API_BASE) ||
+  (isProdHosted
+    ? 'https://investigation-in-10-rooms.onrender.com' // fallback na Render w produkcji
+    : 'http://localhost:3001');                         // lokalnie
+
+const API = String(RAW_API).replace(/\/+$/, '');
+
+if (isBrowser) {
+  console.log('[LoginScene] API_BASE =', API);
+}
 
 class LoginScene extends Phaser.Scene {
   constructor() {
@@ -25,7 +47,10 @@ class LoginScene extends Phaser.Scene {
 
   create() {
     window.dispatchEvent(new CustomEvent('sceneChange', { detail: 'LoginScene' }));
-    ['deduction-board', 'dialog-log'].forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
+    ['deduction-board', 'dialog-log'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
 
     if (this.scene?.manager) {
       this.scene.manager.scenes.forEach(s => {
@@ -40,7 +65,10 @@ class LoginScene extends Phaser.Scene {
 
     const reg = this.game.registry;
     let gm = reg.get('globalMuted');
-    if (gm == null) { gm = localStorage.getItem('globalMuted') === '1'; reg.set('globalMuted', gm); }
+    if (gm == null) {
+      gm = localStorage.getItem('globalMuted') === '1';
+      reg.set('globalMuted', gm);
+    }
     this.sound.mute = !!gm;
 
     this._onGlobalMuteChanged = (_parent, value) => {
@@ -109,7 +137,9 @@ class LoginScene extends Phaser.Scene {
       position: 'absolute', top: '50%', right: '12px', transform: 'translateY(-50%)',
       cursor: 'pointer', color: '#b983ff', textShadow: '0 0 6px #a96fff'
     });
-    togglePass.onclick = () => { passInput.type = passInput.type === 'password' ? 'text' : 'password'; };
+    togglePass.onclick = () => {
+      passInput.type = passInput.type === 'password' ? 'text' : 'password';
+    };
 
     passWrapper.append(passInput, togglePass);
 
@@ -165,34 +195,34 @@ class LoginScene extends Phaser.Scene {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ login: username, password })
       })
-      .then(res => {
-        if (!res.ok) throw new Error('BAD_LOGIN');
-        return res.json();
-      })
-      .then(payload => {
-        if (payload?.user) {
-          localStorage.setItem('user', JSON.stringify(payload.user));
-          localStorage.setItem('lastLogin', payload.user.login || username);
-        } else {
-          localStorage.setItem('lastLogin', username);
-        }
+        .then(res => {
+          if (!res.ok) throw new Error('BAD_LOGIN');
+          return res.json();
+        })
+        .then(payload => {
+          if (payload?.user) {
+            localStorage.setItem('user', JSON.stringify(payload.user));
+            localStorage.setItem('lastLogin', payload.user.login || username);
+          } else {
+            localStorage.setItem('lastLogin', username);
+          }
 
-        if (loginUI) loginUI.innerHTML = '';
-        this.video?.stop(); this.video?.destroy();
-        if (this.ambient) { this.ambient.stop(); this.ambient.destroy(); this.ambient = null; }
-        this.sound.removeByKey && this.sound.removeByKey('ambient');
+          if (loginUI) loginUI.innerHTML = '';
+          this.video?.stop(); this.video?.destroy();
+          if (this.ambient) { this.ambient.stop(); this.ambient.destroy(); this.ambient = null; }
+          this.sound.removeByKey && this.sound.removeByKey('ambient');
 
-        this.scene.start('LevelSelect');
-        this.scene.stop('LoginScene');
-      })
-      .catch(() => {
-        errorMsg.innerText = 'Login lub hasło nieprawidłowe';
-        sfx('error', { volume: 0.9 });
-      })
-      .finally(() => {
-        submitting = false;
-        spinner.classList.add('hidden');
-      });
+          this.scene.start('LevelSelect');
+          this.scene.stop('LoginScene');
+        })
+        .catch(() => {
+          errorMsg.innerText = 'Login lub hasło nieprawidłowe';
+          sfx('error', { volume: 0.9 });
+        })
+        .finally(() => {
+          submitting = false;
+          spinner.classList.add('hidden');
+        });
     };
 
     loginInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
@@ -201,13 +231,28 @@ class LoginScene extends Phaser.Scene {
 
     const formContainer = document.createElement('div');
     formContainer.className = 'form-container';
-    formContainer.append(title, loginInput, passWrapper, errorMsg, loginBtn, spinner, forgotToggle, registerToggle);
+    formContainer.append(
+      title,
+      loginInput,
+      passWrapper,
+      errorMsg,
+      loginBtn,
+      spinner,
+      forgotToggle,
+      registerToggle
+    );
     if (loginUI) loginUI.appendChild(formContainer);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       try {
-        if (this._onResizeMute) { this.scale.off('resize', this._onResizeMute); this._onResizeMute = null; }
-        if (this._onGlobalMuteChanged) { this.game.registry.events.off('changedata-globalMuted', this._onGlobalMuteChanged); this._onGlobalMuteChanged = null; }
+        if (this._onResizeMute) {
+          this.scale.off('resize', this._onResizeMute);
+          this._onResizeMute = null;
+        }
+        if (this._onGlobalMuteChanged) {
+          this.game.registry.events.off('changedata-globalMuted', this._onGlobalMuteChanged);
+          this._onGlobalMuteChanged = null;
+        }
         unbindVisibility('LoginScene');
         this.muteBtn?.destroy(); this.muteBtn = null;
         this.video?.stop(); this.video?.destroy();
@@ -217,7 +262,13 @@ class LoginScene extends Phaser.Scene {
     });
 
     this.events.once(Phaser.Scenes.Events.DESTROY, () => {
-      try { if (this.ambient) { this.ambient.stop(); this.ambient.destroy(); this.ambient = null; } } catch {}
+      try {
+        if (this.ambient) {
+          this.ambient.stop();
+          this.ambient.destroy();
+          this.ambient = null;
+        }
+      } catch {}
     });
   }
 }

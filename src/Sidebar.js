@@ -5,12 +5,36 @@ import { faBars, faCheckCircle, faLock } from '@fortawesome/free-solid-svg-icons
 import './styles/Sidebar.css';
 import { LEVEL_KEYS } from './levels';
 
-const API =
-  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
-  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
-  'http://localhost:3001';
+/* =========================
+   API base detection (jak w scenach)
+   ========================= */
+const isBrowser = typeof window !== 'undefined';
+const host = isBrowser ? window.location.hostname : '';
 
-const HIDE_ON_SCENES = new Set(['LoginScene', 'RegisterScene', 'ForgotPasswordScene', 'ResetPasswordScene']);
+const isProdHosted =
+  /netlify\.app$/.test(host) ||      // Netlify prod
+  /netlify\.live$/.test(host) ||     // Netlify preview
+  /netlify\.dev$/.test(host);        // Netlify dev
+
+const RAW_API =
+  (typeof import.meta !== 'undefined' &&
+    import.meta.env &&
+    import.meta.env.VITE_API_BASE) ||
+  (typeof process !== 'undefined' &&
+    process.env &&
+    process.env.REACT_APP_API_BASE) ||
+  (isProdHosted
+    ? 'https://investigation-in-10-rooms.onrender.com' // Render w produkcji
+    : 'http://localhost:3001');                         // lokalnie
+
+const API = String(RAW_API).replace(/\/+$/, '');
+
+const HIDE_ON_SCENES = new Set([
+  'LoginScene',
+  'RegisterScene',
+  'ForgotPasswordScene',
+  'ResetPasswordScene',
+]);
 
 function buildUnlockSet(completedNums, levelKeysObj) {
   const levels = Object.keys(levelKeysObj).map(Number).sort((a, b) => a - b);
@@ -22,7 +46,7 @@ function buildUnlockSet(completedNums, levelKeysObj) {
     const cur = levels[i];
     if (completed.has(prev)) unlocked.add(cur);
   }
-  completed.forEach(n => unlocked.add(n));
+  completed.forEach((n) => unlocked.add(n));
   return unlocked;
 }
 
@@ -41,7 +65,9 @@ const Sidebar = ({ completedLevels = [] }) => {
     setIsVisible(!hidden);
     if (hidden) {
       setIsOpen(false);
-      window.dispatchEvent(new CustomEvent('sidebarToggle', { detail: { open: false } }));
+      window.dispatchEvent(
+        new CustomEvent('sidebarToggle', { detail: { open: false } })
+      );
     }
   }, []);
 
@@ -58,13 +84,15 @@ const Sidebar = ({ completedLevels = [] }) => {
         const user = JSON.parse(localStorage.getItem('user') || 'null');
         if (!user?.id) return;
         fetch(`${API}/progress/${user.id}`)
-          .then(r => (r.ok ? r.json() : Promise.reject()))
+          .then((r) => (r.ok ? r.json() : Promise.reject()))
           .then((data) => {
             if (!data?.ok || !Array.isArray(data.progress)) return;
             const doneNums = data.progress
-              .filter(p => !!p.completed)
-              .map(p => {
-                const entry = Object.entries(LEVEL_KEYS).find(([, key]) => key === p.levelKey);
+              .filter((p) => !!p.completed)
+              .map((p) => {
+                const entry = Object.entries(LEVEL_KEYS).find(
+                  ([, key]) => key === p.levelKey
+                );
                 return entry ? Number(entry[0]) : null;
               })
               .filter(Boolean);
@@ -90,12 +118,17 @@ const Sidebar = ({ completedLevels = [] }) => {
     () => Object.keys(LEVEL_KEYS).map(Number).sort((a, b) => a - b),
     []
   );
-  const unlocked = useMemo(() => buildUnlockSet(completed, LEVEL_KEYS), [completed]);
+  const unlocked = useMemo(
+    () => buildUnlockSet(completed, LEVEL_KEYS),
+    [completed]
+  );
 
   const toggleMenu = () => {
-    setIsOpen(prev => {
+    setIsOpen((prev) => {
       const next = !prev;
-      window.dispatchEvent(new CustomEvent('sidebarToggle', { detail: { open: next } }));
+      window.dispatchEvent(
+        new CustomEvent('sidebarToggle', { detail: { open: next } })
+      );
       return next;
     });
   };
@@ -123,16 +156,29 @@ const Sidebar = ({ completedLevels = [] }) => {
                 onClick={() => {
                   if (!isUnlocked) return;
                   if (key) {
-                    window.dispatchEvent(new CustomEvent('levelSelect', { detail: { key } }));
+                    window.dispatchEvent(
+                      new CustomEvent('levelSelect', { detail: { key } })
+                    );
                     setIsOpen(false);
-                    window.dispatchEvent(new CustomEvent('sidebarToggle', { detail: { open: false } }));
+                    window.dispatchEvent(
+                      new CustomEvent('sidebarToggle', {
+                        detail: { open: false },
+                      })
+                    );
                   }
                 }}
-                title={!isUnlocked ? 'Zablokowany — ukończ poprzedni poziom' : `Poziom ${n}`}
+                title={
+                  !isUnlocked
+                    ? 'Zablokowany — ukończ poprzedni poziom'
+                    : `Poziom ${n}`
+                }
               >
                 <span>Poziom {n}</span>
                 {isCompleted ? (
-                  <FontAwesomeIcon icon={faCheckCircle} className="check-icon" />
+                  <FontAwesomeIcon
+                    icon={faCheckCircle}
+                    className="check-icon"
+                  />
                 ) : !isUnlocked ? (
                   <FontAwesomeIcon icon={faLock} className="lock-icon" />
                 ) : null}
@@ -147,8 +193,12 @@ const Sidebar = ({ completedLevels = [] }) => {
             // (opcjonalnie) wyczyść dane sesji
             // localStorage.removeItem('user');
             setIsOpen(false);
-            window.dispatchEvent(new CustomEvent('sidebarToggle', { detail: { open: false } }));
-            window.dispatchEvent(new CustomEvent('levelSelect', { detail: { key: 'LoginScene' } }));
+            window.dispatchEvent(
+              new CustomEvent('sidebarToggle', { detail: { open: false } })
+            );
+            window.dispatchEvent(
+              new CustomEvent('levelSelect', { detail: { key: 'LoginScene' } })
+            );
           }}
         >
           Wyloguj
