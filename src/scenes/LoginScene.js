@@ -3,17 +3,39 @@ import Phaser from 'phaser';
 import '../styles/LoginScene.css';
 import { safeResume, bindVisibility, unbindVisibility } from '../lib/audioSafe';
 
-const API =
-  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
-  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
-  'http://localhost:3001';
+/* =========================
+   API base detection (spójne z RegisterScene)
+   ========================= */
+const isBrowser = typeof window !== 'undefined';
+const host = isBrowser ? window.location.hostname : '';
+
+const isProdHosted =
+  /netlify\.app$/.test(host) ||      // Netlify prod
+  /netlify\.live$/.test(host) ||     // Netlify preview
+  /netlify\.dev$/.test(host);        // Netlify dev
+
+const RAW_API =
+  (typeof import.meta !== 'undefined' &&
+    import.meta.env &&
+    import.meta.env.VITE_API_BASE) ||
+  (typeof process !== 'undefined' &&
+    process.env &&
+    process.env.REACT_APP_API_BASE) ||
+  (isProdHosted
+    ? 'https://investigation-in-10-rooms.onrender.com' // fallback na Render w produkcji
+    : 'http://localhost:3001');                         // lokalnie
+
+const API = String(RAW_API).replace(/\/+$/, '');
+
+if (isBrowser) {
+  console.log('[LoginScene] API_BASE =', API);
+}
 
 class LoginScene extends Phaser.Scene {
   constructor() {
     super({ key: 'LoginScene' });
     this._onGlobalMuteChanged = null;
     this._onResizeMute = null;
-    this._onResizeBg = null;
     this.video = null;
     this.muteBtn = null;
   }
@@ -25,9 +47,7 @@ class LoginScene extends Phaser.Scene {
     if (!this.cache.audio.exists('ambient')) this.load.audio('ambient', 'assets/ambient.mp3');
   }
 
-  /**
-   * Dopasowanie tła-wideo do rozmiaru canvasu (efekt "background-size: cover")
-   */
+  /** Dopasowanie tła-wideo do rozmiaru canvasu (efekt "background-size: cover") */
   _resizeBgVideo() {
     if (!this.video || !this.video.video) return;
 
@@ -37,7 +57,6 @@ class LoginScene extends Phaser.Scene {
     const vidW = this.video.video.videoWidth || 16;
     const vidH = this.video.video.videoHeight || 9;
 
-    // skala tak, żeby przykryć cały ekran (cover)
     const scale = Math.max(canvasW / vidW, canvasH / vidH);
 
     this.video
@@ -47,7 +66,10 @@ class LoginScene extends Phaser.Scene {
 
   create() {
     window.dispatchEvent(new CustomEvent('sceneChange', { detail: 'LoginScene' }));
-    ['deduction-board', 'dialog-log'].forEach(id => { const el = document.getElementById(id); if (el) el.remove(); });
+    ['deduction-board', 'dialog-log'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
 
     if (this.scene?.manager) {
       this.scene.manager.scenes.forEach(s => {
@@ -55,14 +77,15 @@ class LoginScene extends Phaser.Scene {
       });
     }
 
-    const { width, height } = this.sys.game.canvas;
-
     this.input.once('pointerdown', () => safeResume(this));
     bindVisibility(this, 'LoginScene');
 
     const reg = this.game.registry;
     let gm = reg.get('globalMuted');
-    if (gm == null) { gm = localStorage.getItem('globalMuted') === '1'; reg.set('globalMuted', gm); }
+    if (gm == null) {
+      gm = localStorage.getItem('globalMuted') === '1';
+      reg.set('globalMuted', gm);
+    }
     this.sound.mute = !!gm;
 
     this._onGlobalMuteChanged = (_parent, value) => {
@@ -77,7 +100,7 @@ class LoginScene extends Phaser.Scene {
     const sfx = (key, cfg) => { try { this.sound.play(key, cfg); } catch {} };
     this.input.on('pointerdown', () => sfx('click', { volume: 0.8, detune: 50 }));
 
-    // --- WIDEO TŁA: pełnoekranowe, responsywne ---
+    // === WIDEO TŁA – pełny ekran, responsywne ===
     this.video = this.add.video(0, 0, 'bgVideo')
       .setMute(true)
       .setLoop(true)
@@ -88,15 +111,14 @@ class LoginScene extends Phaser.Scene {
       this.video.play(true);
     } catch {}
 
-    // Po załadowaniu rzeczywistych wymiarów wideo – dopasuj
+    // Gdy wideo zna swoje prawdziwe wymiary – dopasuj je
     this.video.on('play', () => {
       this._resizeBgVideo();
     });
 
-    // Na wszelki wypadek wywołaj raz po stworzeniu
+    // Na wszelki wypadek dopasuj raz na start
     this._resizeBgVideo();
 
-    // --- Przycisk mute ---
     const btnSize = 40, pad = 20;
     this.muteBtn = this.add.text(
       this.scale.width - btnSize - pad,
@@ -115,7 +137,7 @@ class LoginScene extends Phaser.Scene {
       this.muteBtn.setText(newMuted ? '🔇' : '🔊');
     });
 
-    // Jeden handler resize: przesuwa przycisk + skaluje tło-wideo
+    // Jeden handler resize: przesuwa mute + skaluje tło-wideo
     this._onResizeMute = (gameSize) => {
       const w = gameSize?.width ?? this.scale.width;
       const h = gameSize?.height ?? this.scale.height;
@@ -125,7 +147,6 @@ class LoginScene extends Phaser.Scene {
     };
     this.scale.on('resize', this._onResizeMute);
 
-    // --- UI logowania ---
     const loginUI = document.getElementById('login-ui');
     if (loginUI) loginUI.innerHTML = '';
 
@@ -153,7 +174,9 @@ class LoginScene extends Phaser.Scene {
       position: 'absolute', top: '50%', right: '12px', transform: 'translateY(-50%)',
       cursor: 'pointer', color: '#b983ff', textShadow: '0 0 6px #a96fff'
     });
-    togglePass.onclick = () => { passInput.type = passInput.type === 'password' ? 'text' : 'password'; };
+    togglePass.onclick = () => {
+      passInput.type = passInput.type === 'password' ? 'text' : 'password';
+    };
 
     passWrapper.append(passInput, togglePass);
 
@@ -245,13 +268,28 @@ class LoginScene extends Phaser.Scene {
 
     const formContainer = document.createElement('div');
     formContainer.className = 'form-container';
-    formContainer.append(title, loginInput, passWrapper, errorMsg, loginBtn, spinner, forgotToggle, registerToggle);
+    formContainer.append(
+      title,
+      loginInput,
+      passWrapper,
+      errorMsg,
+      loginBtn,
+      spinner,
+      forgotToggle,
+      registerToggle
+    );
     if (loginUI) loginUI.appendChild(formContainer);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       try {
-        if (this._onResizeMute) { this.scale.off('resize', this._onResizeMute); this._onResizeMute = null; }
-        if (this._onGlobalMuteChanged) { this.game.registry.events.off('changedata-globalMuted', this._onGlobalMuteChanged); this._onGlobalMuteChanged = null; }
+        if (this._onResizeMute) {
+          this.scale.off('resize', this._onResizeMute);
+          this._onResizeMute = null;
+        }
+        if (this._onGlobalMuteChanged) {
+          this.game.registry.events.off('changedata-globalMuted', this._onGlobalMuteChanged);
+          this._onGlobalMuteChanged = null;
+        }
         unbindVisibility('LoginScene');
         this.muteBtn?.destroy(); this.muteBtn = null;
         this.video?.stop(); this.video?.destroy(); this.video = null;
@@ -261,7 +299,13 @@ class LoginScene extends Phaser.Scene {
     });
 
     this.events.once(Phaser.Scenes.Events.DESTROY, () => {
-      try { if (this.ambient) { this.ambient.stop(); this.ambient.destroy(); this.ambient = null; } } catch {}
+      try {
+        if (this.ambient) {
+          this.ambient.stop();
+          this.ambient.destroy();
+          this.ambient = null;
+        }
+      } catch {}
     });
   }
 }
