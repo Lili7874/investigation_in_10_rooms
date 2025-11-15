@@ -46,17 +46,33 @@ const KNOWN_SCENES = new Set([
 
 const App = () => {
   const gameRef = useRef(null);
-  const [completedLevels] = useState([]); // usunięty nieużywany setter
+  const [completedLevels] = useState([]); // na razie tylko do przekazania do Sidebara
   const [showSidebar, setShowSidebar] = useState(false);
 
   useEffect(() => {
     if (!gameRef.current) {
-      gameRef.current = new Phaser.Game({
+      const config = {
         type: Phaser.AUTO,
-        width: window.innerWidth,
-        height: window.innerHeight,
         parent: 'game-container',
         transparent: true,
+        backgroundColor: 'rgba(0,0,0,0)',
+
+        // 🔥 Klucz: automatyczne dopasowanie do okna
+        scale: {
+          mode: Phaser.Scale.RESIZE,          // płótno zmienia rozmiar razem z oknem
+          autoCenter: Phaser.Scale.CENTER_BOTH,
+          width: window.innerWidth,          // rozmiar startowy
+          height: window.innerHeight,
+          min: {
+            width: 800,
+            height: 600,
+          },
+          max: {
+            width: 1920,
+            height: 1080,
+          },
+        },
+
         scene: [
           LoginScene,
           RegisterScene,
@@ -73,7 +89,9 @@ const App = () => {
           LevelHospital,
           LevelCasino,
         ],
-      });
+      };
+
+      gameRef.current = new Phaser.Game(config);
 
       // Start: scena z URL ?scene=..., inaczej LoginScene
       const params = new URLSearchParams(window.location.search);
@@ -83,7 +101,7 @@ const App = () => {
           ? sceneFromUrl
           : 'LoginScene';
 
-      // Ustaw od razu widoczność sidebara pod scenę startową
+      // Od razu ustaw widoczność sidebara pod scenę startową
       setShowSidebar(!HIDE_SCENES.has(startKey));
 
       gameRef.current.scene.start(startKey);
@@ -104,12 +122,13 @@ const App = () => {
       gameRef.current.scene.start(key);
     };
 
-    // Reaguj na rozmiar okna (dopasuj płótno Phasera)
+    // 🔁 Dopasowanie Phasera przy zmianie rozmiaru okna
     const onResize = () => {
+      const game = gameRef.current;
+      if (!game || !game.scale) return;
       const w = window.innerWidth;
       const h = window.innerHeight;
-      const game = gameRef.current;
-      if (game && game.scale) game.scale.resize(w, h);
+      game.scale.resize(w, h);
     };
 
     window.addEventListener('sceneChange', onSceneChange);
@@ -120,8 +139,10 @@ const App = () => {
       window.removeEventListener('sceneChange', onSceneChange);
       window.removeEventListener('levelSelect', onLevelSelect);
       window.removeEventListener('resize', onResize);
-      gameRef.current?.destroy(true);
-      gameRef.current = null;
+      if (gameRef.current) {
+        gameRef.current.destroy(true);
+        gameRef.current = null; // 👈 tu był błąd z przecinkiem
+      }
     };
   }, []);
 
