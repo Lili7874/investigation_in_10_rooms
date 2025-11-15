@@ -1,6 +1,11 @@
+/* Minimalne, bez wpływu na responsywność gry */
+
 .App {
   text-align: center;
 }
+
+/* Zostawiamy animację logo, gdybyś kiedyś użyła,
+   ale nic nie wymusza rozmiarów/layoutu całej strony */
 
 .App-logo {
   height: 40vmin;
@@ -11,17 +16,6 @@
   .App-logo {
     animation: App-logo-spin infinite 20s linear;
   }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
 }
 
 .App-link {
