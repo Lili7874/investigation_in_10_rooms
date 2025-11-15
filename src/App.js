@@ -4,6 +4,7 @@ import Phaser from 'phaser';
 
 // Sceny
 import LoginScene from './scenes/LoginScene';
+import LegalScene from './scenes/LegalScene';
 import RegisterScene from './scenes/RegisterScene';
 import ForgotPasswordScene from './scenes/ForgotPasswordScene';
 import ResetPasswordScene from './scenes/ResetPasswordScene';
@@ -79,6 +80,7 @@ const App = () => {
           ForgotPasswordScene,
           ResetPasswordScene,
           LevelSelect,
+          LegalScene,
           LevelOffice,
           LevelRestaurant,
           LevelLibrary,

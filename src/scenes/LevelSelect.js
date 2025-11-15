@@ -41,6 +41,8 @@ export default class LevelSelect extends Phaser.Scene {
     this._completedNums = new Set(); // zbiór zaliczonych numerów
     this._unlockedNums  = new Set(); // zbiór odblokowanych numerów
     this._progressListener = null;
+
+    this._scrollCfg = null;          // dane do scrolla (żeby ewentualnie łatwo reagować na resize)
   }
 
   preload() {
@@ -158,10 +160,10 @@ export default class LevelSelect extends Phaser.Scene {
       fontFamily: 'Monaco, monospace', fontSize: '32px', color: '#FFFFFF'
     }).setOrigin(0.5);
 
-    // panel-lista
-    const containerW = 460;
-    const containerH = Math.min(520, height - 180);
-    const cx = width/2, cy = height/2 + 20;
+    // panel-lista – responsywny
+    const containerW = Math.min(460, width - 80);
+    const containerH = Math.min(520, height - 220); // zostawiamy miejsce na tytuł i przycisk Wyloguj
+    const cx = width/2, cy = height/2 + 10;
 
     const gfx = this.add.graphics();
     gfx.fillStyle(0x140028, 0.9);
@@ -169,6 +171,7 @@ export default class LevelSelect extends Phaser.Scene {
     gfx.fillRoundedRect(cx - containerW/2, cy - containerH/2, containerW, containerH, 14);
     gfx.strokeRoundedRect(cx - containerW/2, cy - containerH/2, containerW, containerH, 14);
 
+    // obszar przewijany
     const scrollArea = this.add.container(cx - containerW/2 + 16, cy - containerH/2 + 16);
     const rowH = 44, gap = 10;
 
@@ -202,8 +205,85 @@ export default class LevelSelect extends Phaser.Scene {
       this._rowsByNum.set(n, { bg, label, hit, lock, check });
     });
 
+    // SCROLL – koło / klawiatura / przyciski
+    const totalH = entries.length * (rowH + gap) - gap;
+    const visibleH = containerH - 32; // wysokość „okienka” wewnątrz ramki
+    const maxScroll = Math.max(0, totalH - visibleH);
+    let scrollY = 0;
+
+    const applyScroll = () => {
+      const baseY = cy - containerH/2 + 16;
+      const clamped = Phaser.Math.Clamp(scrollY, 0, maxScroll);
+      scrollArea.y = baseY - clamped;
+    };
+
+    applyScroll();
+
+    const scrollStep = rowH + gap;
+
+    const scrollBy = (delta) => {
+      scrollY += delta;
+      applyScroll();
+    };
+
+    // kółko myszy
+    this.input.on('wheel', (_p, _o, dx, dy) => {
+      if (Math.abs(dy) > Math.abs(dx)) {
+        scrollBy(dy);
+      }
+    });
+
+    // klawiatura ↑ / ↓
+    this.input.keyboard?.on('keydown-UP', () => scrollBy(-scrollStep));
+    this.input.keyboard?.on('keydown-DOWN', () => scrollBy(scrollStep));
+
+    // przyciski ▲ i ▼ obok panelu, żeby było bardziej „czytelnie”, że da się przewijać
+    const arrowStyle = {
+      fontFamily: 'Monaco, monospace',
+      fontSize: '22px',
+      color: '#FFFFFF'
+    };
+
+    const upArrow = this.add.text(
+      cx + containerW/2 + 20,
+      cy - containerH/2 + 20,
+      '▲',
+      arrowStyle
+    )
+      .setOrigin(0.5)
+      .setInteractive({ cursor: 'pointer' });
+
+    const downArrow = this.add.text(
+      cx + containerW/2 + 20,
+      cy + containerH/2 - 20,
+      '▼',
+      arrowStyle
+    )
+      .setOrigin(0.5)
+      .setInteractive({ cursor: 'pointer' });
+
+    upArrow.on('pointerdown', () => scrollBy(-scrollStep));
+    downArrow.on('pointerdown', () => scrollBy(scrollStep));
+
+    // zapamiętujemy konfigurację scrolla (jakbyś chciała kiedyś reagować na resize)
+    this._scrollCfg = {
+      entriesCount: entries.length,
+      rowH,
+      gap,
+      containerW,
+      containerH,
+      cx,
+      cy,
+      scrollArea,
+      upArrow,
+      downArrow,
+      scrollY,
+      maxScroll,
+      applyScroll,
+    };
+
     // wyloguj
-    const logoutBtn = this.add.text(cx, cy + containerH/2 + 30, '🚪 Wyloguj', {
+    const logoutBtn = this.add.text(cx, cy + containerH/2 + 40, '🚪 Wyloguj', {
       fontFamily: 'Monaco, monospace', fontSize: '18px',
       color: '#ff4444', backgroundColor: '#220000', padding: { x: 12, y: 6 }
     })
@@ -267,22 +347,6 @@ export default class LevelSelect extends Phaser.Scene {
       this.muteBtn?.setPosition(gameSize.width - btnSize - pad, gameSize.height - btnSize - pad);
     };
     this.scale.on('resize', this._onResizeMute);
-
-    // scroll listy
-    const totalH = entries.length * (rowH + gap) - gap;
-    const maxScroll = Math.max(0, totalH - (containerH - 32));
-    let scrollY = 0;
-    const applyScroll = () => {
-      const baseY = cy - containerH/2 + 16;
-      const clamped = Phaser.Math.Clamp(scrollY, 0, maxScroll);
-      scrollArea.y = baseY - clamped;
-    };
-    this.input.on('wheel', (_p, _o, dx, dy) => {
-      if (Math.abs(dy) > Math.abs(dx)) {
-        scrollY += dy;
-        applyScroll();
-      }
-    });
 
     // === pobierz progres i ustaw stan odblokowania ===
     const user = this._getUser();

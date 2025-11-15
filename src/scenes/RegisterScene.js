@@ -1,4 +1,3 @@
-// src/scenes/RegisterScene.js
 import Phaser from 'phaser';
 import '../styles/LoginScene.css';
 import { safeResume, bindVisibility, unbindVisibility } from '../lib/audioSafe';
@@ -24,7 +23,6 @@ const API = String(RAW_API).replace(/\/+$/, '');
 if (isBrowser) {
   console.log('[RegisterScene] API_BASE =', API);
 }
-
 
 const PW_RULES = { MIN_LEN: 8, MAX_LEN: 72 };
 const COMMON = new Set([
@@ -259,6 +257,7 @@ export default class RegisterScene extends Phaser.Scene {
     togglePass2.onclick = () => { pass2Input.type = pass2Input.type === 'password' ? 'text' : 'password'; };
     pass2Wrapper.append(pass2Input, togglePass2);
 
+    // === Akceptacja regulaminu + checkbox ===
     const termsRow = document.createElement('label');
     Object.assign(termsRow.style, {
       display: 'flex', alignItems: 'center', gap: '10px',
@@ -271,7 +270,9 @@ export default class RegisterScene extends Phaser.Scene {
     termsCheckbox.style.cursor = 'pointer';
 
     const termsText = document.createElement('span');
-    termsText.innerHTML = `Akceptuję <a href="/regulamin" target="_blank" rel="noopener" style="color:#b983ff;text-decoration:underline">regulamin</a> i <a href="/polityka-prywatnosci" target="_blank" rel="noopener" style="color:#b983ff;text-decoration:underline">politykę prywatności</a>.`;
+    // prosty tekst bez linków – akceptacja
+    termsText.textContent = 'Akceptuję regulamin i politykę prywatności.';
+
     termsRow.append(termsCheckbox, termsText);
 
     const errorMsg = document.createElement('div');
@@ -307,11 +308,32 @@ export default class RegisterScene extends Phaser.Scene {
       this.scene.stop('RegisterScene');
     };
 
+    // 🔹 DODATKOWY ODNIESIENIE DO PANELU REGULAMINU (LegalScene)
+    const legalLink = document.createElement('div');
+    legalLink.className = 'register-toggle-text';
+    legalLink.innerText = 'Zobacz regulamin i politykę prywatności';
+    legalLink.onclick = () => {
+      sfx('click', { volume: 0.8, detune: 50 });
+      try { if (ui) ui.innerHTML = ''; } catch {}
+      this.scene.start('LegalScene');
+      this.scene.stop('RegisterScene');
+    };
+
     const form = document.createElement('div');
     form.className = 'form-container';
     form.append(
-      title, loginInput, emailInput, passWrapper, pass2Wrapper, termsRow,
-      errorMsg, successMsg, submitBtn, spinner, backToLogin
+      title,
+      loginInput,
+      emailInput,
+      passWrapper,
+      pass2Wrapper,
+      termsRow,
+      errorMsg,
+      successMsg,
+      submitBtn,
+      spinner,
+      legalLink,       // ⬅️ nowy odnośnik do panelu regulaminu
+      backToLogin
     );
     if (ui) ui.appendChild(form);
 
@@ -385,13 +407,36 @@ export default class RegisterScene extends Phaser.Scene {
       successMsg.innerText = '';
 
       const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!login || !email || !pass1 || !pass2) { sfx('error', { volume: 0.9 }); errorMsg.innerText = errorMap.MISSING_FIELDS; return; }
-      if (!emailRe.test(email)) { sfx('error', { volume: 0.9 }); errorMsg.innerText = errorMap.BAD_EMAIL; return; }
-      if (!termsCheckbox.checked) { sfx('error', { volume: 0.9 }); errorMsg.innerText = 'Aby utworzyć konto, musisz zaakceptować regulamin.'; termsCheckbox.focus(); return; }
+      if (!login || !email || !pass1 || !pass2) {
+        sfx('error', { volume: 0.9 });
+        errorMsg.innerText = errorMap.MISSING_FIELDS;
+        return;
+      }
+      if (!emailRe.test(email)) {
+        sfx('error', { volume: 0.9 });
+        errorMsg.innerText = errorMap.BAD_EMAIL;
+        return;
+      }
+      if (!termsCheckbox.checked) {
+        sfx('error', { volume: 0.9 });
+        errorMsg.innerText = 'Aby utworzyć konto, musisz zaakceptować regulamin.';
+        termsCheckbox.focus();
+        return;
+      }
 
       const localPw = validatePasswordFront(pass1, { login, email });
-      if (!localPw.ok) { sfx('error', { volume: 0.9 }); errorMsg.innerText = 'Hasło nie spełnia wymagań (zobacz dymek obok pola hasła).'; showTip(); renderPwIssues(pass1, { login, email }); return; }
-      if (pass1 !== pass2) { sfx('error', { volume: 0.9 }); errorMsg.innerText = 'Hasła muszą być takie same'; return; }
+      if (!localPw.ok) {
+        sfx('error', { volume: 0.9 });
+        errorMsg.innerText = 'Hasło nie spełnia wymagań (zobacz dymek obok pola hasła).';
+        showTip();
+        renderPwIssues(pass1, { login, email });
+        return;
+      }
+      if (pass1 !== pass2) {
+        sfx('error', { volume: 0.9 });
+        errorMsg.innerText = 'Hasła muszą być takie same';
+        return;
+      }
 
       sfx('click', { volume: 0.8, detune: 50 });
       submitting = true;
@@ -422,7 +467,9 @@ export default class RegisterScene extends Phaser.Scene {
           }
 
           const msg = (code && errorMap[code]) || (res.status === 409 ? errorMap.DUPLICATE : `Błąd (${res.status})`);
-          errorMsg.innerText = msg; sfx('error', { volume: 0.9 }); return;
+          errorMsg.innerText = msg;
+          sfx('error', { volume: 0.9 });
+          return;
         }
 
         successMsg.innerText = 'Konto utworzone! Przekierowuję do logowania…';
