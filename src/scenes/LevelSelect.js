@@ -37,12 +37,12 @@ export default class LevelSelect extends Phaser.Scene {
     this._onResizeMute = null;
     this._onGlobalMuteChanged = null;
 
-    this._rowsByNum = new Map();     // num -> { bg, label, hit, lock, check }
-    this._completedNums = new Set(); // zbiór zaliczonych numerów
-    this._unlockedNums  = new Set(); // zbiór odblokowanych numerów
+    this._rowsByNum = new Map();
+    this._completedNums = new Set();
+    this._unlockedNums  = new Set();
     this._progressListener = null;
 
-    this._scrollCfg = null;          // dane do scrolla (żeby ewentualnie łatwo reagować na resize)
+    this._scrollCfg = null;
   }
 
   preload() {
@@ -61,7 +61,7 @@ export default class LevelSelect extends Phaser.Scene {
     try {
       const res = await fetch(`${API}/progress/${userId}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json(); // { ok, progress: [{ levelKey, completed, ...}, ...] }
+      const data = await res.json();
       return data?.progress || [];
     } catch (e) {
       console.warn('Nie mogę pobrać progresu:', e.message || e);
@@ -70,14 +70,12 @@ export default class LevelSelect extends Phaser.Scene {
   }
 
   _numFromKey(levelKey) {
-    // LEVEL_KEYS: { 1:'LevelOffice', 2:'LevelRestaurant', ... }
     const entries = Object.entries(LEVEL_KEYS);
     const found = entries.find(([n, k]) => k === levelKey);
     return found ? Number(found[0]) : null;
   }
 
   _computeUnlocked() {
-    // zasada: 1 zawsze odblokowany; n>1 odblokowany, jeśli (n-1) jest completed
     const nums = [...this._rowsByNum.keys()].sort((a,b)=>a-b);
     const unlocked = new Set();
     nums.forEach(n => {
@@ -88,24 +86,19 @@ export default class LevelSelect extends Phaser.Scene {
   }
 
   _applyVisualState() {
-    // odśwież wygląd i interaktywność wierszy
     this._rowsByNum.forEach((row, n) => {
       const isCompleted = this._completedNums.has(n);
       const isUnlocked  = this._unlockedNums.has(n);
 
-      // wygląd
       const baseAlpha = isUnlocked ? 1 : 0.45;
       row.bg.setFillStyle(0xffffff, isUnlocked ? 0.10 : 0.06);
       row.bg.setAlpha(baseAlpha);
       row.label.setAlpha(baseAlpha);
 
-      // ikonki
       row.lock.setVisible(!isUnlocked);
       row.check.setVisible(isCompleted);
 
-      // interaktywność
       row.hit.removeAllListeners();
-      // zapamiętaj bazowe X kłódki, żeby po "shake" wrócić do pozycji
       const lockBaseX = row.lock.x;
 
       if (isUnlocked) {
@@ -117,14 +110,13 @@ export default class LevelSelect extends Phaser.Scene {
         row.hit.setInteractive({ cursor: 'not-allowed' });
         row.hit.on('pointerdown', () => {
           try { this.sound.play('error', { volume: 0.8 }); } catch (_) {}
-          // drobny „shake” blokady
           this.tweens.add({
             targets: [row.lock],
             x: { from: lockBaseX - 3, to: lockBaseX + 3 },
             duration: 40,
             yoyo: true,
             repeat: 3,
-            onComplete: () => { row.lock.setX(lockBaseX); } // ← bez samoprzydziału
+            onComplete: () => { row.lock.setX(lockBaseX); }
           });
         });
       }
@@ -143,7 +135,6 @@ export default class LevelSelect extends Phaser.Scene {
   async create() {
     window.dispatchEvent(new CustomEvent('sceneChange', { detail: 'LevelSelect' }));
 
-    // kolejność poziomów (taka sama w App/Sidebar)
     const levelOrder = [
       'LevelOffice','LevelRestaurant','LevelLibrary','LevelTrainstation',
       'LevelTheater','LevelMuseum','LevelVillageHouse','LevelHospital','LevelCasino'
@@ -160,9 +151,9 @@ export default class LevelSelect extends Phaser.Scene {
       fontFamily: 'Monaco, monospace', fontSize: '32px', color: '#FFFFFF'
     }).setOrigin(0.5);
 
-    // panel-lista – responsywny
+    // panel-lista
     const containerW = Math.min(460, width - 80);
-    const containerH = Math.min(520, height - 220); // zostawiamy miejsce na tytuł i przycisk Wyloguj
+    const containerH = Math.min(520, height - 220);
     const cx = width/2, cy = height/2 + 10;
 
     const gfx = this.add.graphics();
@@ -171,73 +162,67 @@ export default class LevelSelect extends Phaser.Scene {
     gfx.fillRoundedRect(cx - containerW/2, cy - containerH/2, containerW, containerH, 14);
     gfx.strokeRoundedRect(cx - containerW/2, cy - containerH/2, containerW, containerH, 14);
 
-    // obszar przewijany
-    const scrollArea = this.add.container(cx - containerW/2 + 16, cy - containerH/2 + 16);
+    // obszar przewijany (logika)
+    const innerPadding = 16;
+    const scrollArea = this.add.container(
+      cx - containerW/2 + innerPadding,
+      cy - containerH/2 + innerPadding
+    );
     const rowH = 44, gap = 10;
 
-    // zbuduj wiersze
     const entries = Object.keys(LEVEL_KEYS).map(n => Number(n)).sort((a,b)=>a-b);
 
     entries.forEach((n, i) => {
       const y = i * (rowH + gap);
 
-      const bg = this.add.rectangle(0, y, containerW - 32, rowH, 0xffffff, 0.06)
+      const bg = this.add.rectangle(0, y, containerW - innerPadding*2, rowH, 0xffffff, 0.06)
         .setOrigin(0,0).setStrokeStyle(1, 0xb983ff, 0.6);
 
       const label = this.add.text(14, y + 10, `Poziom ${n}`, {
         fontFamily: 'Monaco, monospace', fontSize: '18px', color: '#FFFFFF'
       }).setOrigin(0,0);
 
-      // ikonki po prawej: lock i check
-      const lock = this.add.text(containerW - 32 - 26, y + 9, '🔒', {
+      const lock = this.add.text(containerW - innerPadding*2 - 26, y + 9, '🔒', {
         fontFamily: 'Monaco, monospace', fontSize: '18px', color: '#FFFFFF'
       }).setOrigin(0,0).setAlpha(0.9);
 
-      const check = this.add.text(containerW - 32 - 26, y + 9, '✅', {
+      const check = this.add.text(containerW - innerPadding*2 - 26, y + 9, '✅', {
         fontFamily: 'Monaco, monospace', fontSize: '18px', color: '#32cd32'
       }).setOrigin(0,0).setVisible(false);
 
-      const hit = this.add.rectangle((containerW-32)/2, y + rowH/2, containerW - 32, rowH, 0x000000, 0);
-      hit.setOrigin(0.5, 0.5);
+      const hit = this.add.rectangle(
+        (containerW - innerPadding*2)/2,
+        y + rowH/2,
+        containerW - innerPadding*2,
+        rowH,
+        0x000000,
+        0
+      ).setOrigin(0.5);
 
       scrollArea.add([bg, label, lock, check, hit]);
-
       this._rowsByNum.set(n, { bg, label, hit, lock, check });
     });
 
-    // SCROLL – koło / klawiatura / przyciski
+    // MASKA – nic nie wychodzi poza panel
+    const maskGfx = this.make.graphics({ x: 0, y: 0, add: true });
+    maskGfx.fillStyle(0xffffff);
+    maskGfx.fillRoundedRect(
+      cx - containerW/2 + innerPadding,
+      cy - containerH/2 + innerPadding,
+      containerW - innerPadding*2,
+      containerH - innerPadding*2,
+      10
+    );
+    const mask = maskGfx.createGeometryMask();
+    maskGfx.visible = false;
+    scrollArea.setMask(mask);
+
+    // SCROLL
     const totalH = entries.length * (rowH + gap) - gap;
-    const visibleH = containerH - 32; // wysokość „okienka” wewnątrz ramki
+    const visibleH = containerH - innerPadding*2;
     const maxScroll = Math.max(0, totalH - visibleH);
     let scrollY = 0;
 
-    const applyScroll = () => {
-      const baseY = cy - containerH/2 + 16;
-      const clamped = Phaser.Math.Clamp(scrollY, 0, maxScroll);
-      scrollArea.y = baseY - clamped;
-    };
-
-    applyScroll();
-
-    const scrollStep = rowH + gap;
-
-    const scrollBy = (delta) => {
-      scrollY += delta;
-      applyScroll();
-    };
-
-    // kółko myszy
-    this.input.on('wheel', (_p, _o, dx, dy) => {
-      if (Math.abs(dy) > Math.abs(dx)) {
-        scrollBy(dy);
-      }
-    });
-
-    // klawiatura ↑ / ↓
-    this.input.keyboard?.on('keydown-UP', () => scrollBy(-scrollStep));
-    this.input.keyboard?.on('keydown-DOWN', () => scrollBy(scrollStep));
-
-    // przyciski ▲ i ▼ obok panelu, żeby było bardziej „czytelnie”, że da się przewijać
     const arrowStyle = {
       fontFamily: 'Monaco, monospace',
       fontSize: '22px',
@@ -245,41 +230,64 @@ export default class LevelSelect extends Phaser.Scene {
     };
 
     const upArrow = this.add.text(
-      cx + containerW/2 + 20,
-      cy - containerH/2 + 20,
+      cx + containerW/2 - 18,
+      cy - containerH/2 + 18,
       '▲',
       arrowStyle
-    )
-      .setOrigin(0.5)
-      .setInteractive({ cursor: 'pointer' });
+    ).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
 
     const downArrow = this.add.text(
-      cx + containerW/2 + 20,
-      cy + containerH/2 - 20,
+      cx + containerW/2 - 18,
+      cy + containerH/2 - 18,
       '▼',
       arrowStyle
-    )
-      .setOrigin(0.5)
-      .setInteractive({ cursor: 'pointer' });
+    ).setOrigin(0.5).setInteractive({ cursor: 'pointer' });
 
-    upArrow.on('pointerdown', () => scrollBy(-scrollStep));
-    downArrow.on('pointerdown', () => scrollBy(scrollStep));
+    const updateArrows = () => {
+      upArrow.setAlpha(scrollY <= 0 ? 0.25 : 1);
+      downArrow.setAlpha(scrollY >= maxScroll ? 0.25 : 1);
+    };
 
-    // zapamiętujemy konfigurację scrolla (jakbyś chciała kiedyś reagować na resize)
+    const applyScroll = () => {
+      const baseY = cy - containerH/2 + innerPadding;
+      const clamped = Phaser.Math.Clamp(scrollY, 0, maxScroll);
+      scrollY = clamped;
+      scrollArea.y = baseY - clamped;
+      updateArrows();
+    };
+
+    const scrollStep = rowH + gap;
+
+    const scrollBy = (deltaSteps) => {
+      scrollY += deltaSteps * scrollStep;
+      applyScroll();
+    };
+
+    applyScroll();
+
+    // kółko myszy – „skokowo” po jednym wierszu
+    this.input.on('wheel', (_p, _o, dx, dy) => {
+      if (Math.abs(dy) > Math.abs(dx)) {
+        const dir = Math.sign(dy);
+        if (dir !== 0) scrollBy(dir);
+      }
+    });
+
+    // klawiatura ↑ / ↓
+    this.input.keyboard?.on('keydown-UP', () => scrollBy(-1));
+    this.input.keyboard?.on('keydown-DOWN', () => scrollBy(1));
+
+    // strzałki
+    upArrow.on('pointerdown', () => scrollBy(-1));
+    downArrow.on('pointerdown', () => scrollBy(1));
+
     this._scrollCfg = {
-      entriesCount: entries.length,
-      rowH,
-      gap,
-      containerW,
-      containerH,
-      cx,
-      cy,
       scrollArea,
       upArrow,
       downArrow,
       scrollY,
       maxScroll,
-      applyScroll,
+      applyScroll
     };
 
     // wyloguj
@@ -315,7 +323,6 @@ export default class LevelSelect extends Phaser.Scene {
     }
     this.sound.mute = !!gm;
 
-    // przycisk 🔊/🔇
     const btnSize = 40, pad = 20;
     this.muteBtn = this.add.text(
       this.scale.width - btnSize - pad,
@@ -348,11 +355,10 @@ export default class LevelSelect extends Phaser.Scene {
     };
     this.scale.on('resize', this._onResizeMute);
 
-    // === pobierz progres i ustaw stan odblokowania ===
+    // === progres ===
     const user = this._getUser();
     if (user?.id) {
       const progress = await this._fetchProgress(user.id);
-      // uzupełnij _completedNums
       this._completedNums.clear();
       for (const row of progress) {
         if (row.completed && row.levelKey) {
@@ -361,14 +367,12 @@ export default class LevelSelect extends Phaser.Scene {
         }
       }
     } else {
-      this._completedNums.clear(); // brak usera = brak progresu
+      this._completedNums.clear();
     }
 
-    // policz odblokowane i odśwież wygląd
     this._computeUnlocked();
     this._applyVisualState();
 
-    // aktualizuj po zapisie progresu z poziomu
     this._progressListener = (e) => {
       const levelKey = e?.detail?.levelKey;
       if (!levelKey) return;
