@@ -1,12 +1,29 @@
-// src/scenes/BaseInvestigationScene.js
 import Phaser from 'phaser';
 import '../styles/GameScene.css';
 import { safeResume, bindVisibility, unbindVisibility } from '../lib/audioSafe';
 
-const API =
+// --- API base detection (taka sama logika jak w Login/Register/Sidebar) ---
+const isBrowser = typeof window !== 'undefined';
+const host = isBrowser ? window.location.hostname : '';
+
+const isProdHosted =
+  /netlify\.app$/.test(host) ||      // Netlify prod
+  /netlify\.live$/.test(host) ||     // Netlify preview
+  /netlify\.dev$/.test(host);        // Netlify dev
+
+const RAW_API =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
-  'http://localhost:3001';
+  (isProdHosted
+    ? 'https://investigation-in-10-rooms.onrender.com'  // twardy fallback prod
+    : 'http://localhost:3001');                         // lokalnie
+
+const API = String(RAW_API).replace(/\/+$/, ''); // obcina końcowe /, żeby nie było //progress
+
+if (isBrowser) {
+  console.log('[BaseInvestigationScene] API_BASE =', API);
+}
+
 
 
 export default class BaseInvestigationScene extends Phaser.Scene {
