@@ -47,23 +47,6 @@ class LegalScene extends Phaser.Scene {
     if (!this.cache.audio.exists('ambient')) this.load.audio('ambient', 'assets/ambient.mp3');
   }
 
-  /** Dopasowanie tła-wideo do rozmiaru canvasu (efekt "background-size: cover") */
-  _resizeBgVideo() {
-    if (!this.video || !this.video.video) return;
-
-    const canvasW = this.scale.width;
-    const canvasH = this.scale.height;
-
-    const vidW = this.video.video.videoWidth || 16;
-    const vidH = this.video.video.videoHeight || 9;
-
-    const scale = Math.max(canvasW / vidW, canvasH / vidH);
-
-    this.video
-      .setDisplaySize(vidW * scale, vidH * scale)
-      .setPosition(canvasW / 2, canvasH / 2);
-  }
-
   create() {
     window.dispatchEvent(new CustomEvent('sceneChange', { detail: 'LegalScene' }));
     ['deduction-board', 'dialog-log', 'deduction-result'].forEach(id => {
@@ -103,22 +86,19 @@ class LegalScene extends Phaser.Scene {
     const sfx = (key, cfg) => { try { this.sound.play(key, cfg); } catch {} };
     this.input.on('pointerdown', () => sfx('click', { volume: 0.8, detune: 50 }));
 
-    // === WIDEO TŁA – pełny ekran, responsywne ===
-    this.video = this.add.video(0, 0, 'bgVideo')
-      .setMute(true)
-      .setLoop(true)
-      .setDepth(-1)
-      .setOrigin(0.5);
+    // === WIDEO TŁA – takie same ustawienia jak w RegisterScene (300x150, center) ===
+    const { width, height } = this.sys.game.canvas;
 
+    this.video = this.add.video(0, 0, 'bgVideo');
     try {
-      this.video.play(true);
+      this.video.setMute(true).setLoop(true).play(true);
     } catch {}
 
-    this.video.on('play', () => {
-      this._resizeBgVideo();
-    });
-
-    this._resizeBgVideo();
+    this.video
+      .setDepth(-1)
+      .setDisplaySize(300, 150)
+      .setOrigin(0.5)
+      .setPosition(width / 2, height / 2);
 
     // === przycisk mute ===
     const btnSize = 40, pad = 20;
@@ -142,13 +122,11 @@ class LegalScene extends Phaser.Scene {
       this.muteBtn.setText(newMuted ? '🔇' : '🔊');
     });
 
-    // resize: mute + tło-wideo
+    // resize: tylko mute – wideo zostaje w 300x150
     this._onResizeMute = (gameSize) => {
       const w = gameSize?.width ?? this.scale.width;
       const h = gameSize?.height ?? this.scale.height;
-
       this.muteBtn?.setPosition(w - btnSize - pad, h - btnSize - pad);
-      this._resizeBgVideo();
     };
     this.scale.on('resize', this._onResizeMute);
 
@@ -307,7 +285,7 @@ class LegalScene extends Phaser.Scene {
     backBtn.onclick = () => {
       sfx('click', { volume: 0.8, detune: 50 });
       if (ui) ui.innerHTML = '';
-      this.scene.start('LoginScene'); // tu ustaw scenę, do której chcesz wrócić
+      this.scene.start('LoginScene'); // albo 'RegisterScene', jeśli wolisz
       this.scene.stop('LegalScene');
     };
 

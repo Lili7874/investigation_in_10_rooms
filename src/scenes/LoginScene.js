@@ -47,23 +47,6 @@ class LoginScene extends Phaser.Scene {
     if (!this.cache.audio.exists('ambient')) this.load.audio('ambient', 'assets/ambient.mp3');
   }
 
-  /** Dopasowanie tła-wideo do rozmiaru canvasu (efekt "background-size: cover") */
-  _resizeBgVideo() {
-    if (!this.video || !this.video.video) return;
-
-    const canvasW = this.scale.width;
-    const canvasH = this.scale.height;
-
-    const vidW = this.video.video.videoWidth || 16;
-    const vidH = this.video.video.videoHeight || 9;
-
-    const scale = Math.max(canvasW / vidW, canvasH / vidH);
-
-    this.video
-      .setDisplaySize(vidW * scale, vidH * scale)
-      .setPosition(canvasW / 2, canvasH / 2);
-  }
-
   create() {
     window.dispatchEvent(new CustomEvent('sceneChange', { detail: 'LoginScene' }));
     ['deduction-board', 'dialog-log'].forEach(id => {
@@ -76,6 +59,8 @@ class LoginScene extends Phaser.Scene {
         if (s?.sys?.settings?.key !== 'LoginScene') this.scene.stop(s.sys.settings.key);
       });
     }
+
+    const { width, height } = this.sys.game.canvas;
 
     this.input.once('pointerdown', () => safeResume(this));
     bindVisibility(this, 'LoginScene');
@@ -100,24 +85,16 @@ class LoginScene extends Phaser.Scene {
     const sfx = (key, cfg) => { try { this.sound.play(key, cfg); } catch {} };
     this.input.on('pointerdown', () => sfx('click', { volume: 0.8, detune: 50 }));
 
-    // === WIDEO TŁA – pełny ekran, responsywne ===
-    this.video = this.add.video(0, 0, 'bgVideo')
-      .setMute(true)
-      .setLoop(true)
-      .setDepth(-1)
-      .setOrigin(0.5);
-
+    // === WIDEO TŁA – takie same ustawienia jak w RegisterScene ===
+    this.video = this.add.video(0, 0, 'bgVideo');
     try {
-      this.video.play(true);
+      this.video.setMute(true).setLoop(true).play(true);
     } catch {}
-
-    // Gdy wideo zna swoje prawdziwe wymiary – dopasuj je
-    this.video.on('play', () => {
-      this._resizeBgVideo();
-    });
-
-    // Na wszelki wypadek dopasuj raz na start
-    this._resizeBgVideo();
+    this.video
+      .setDepth(-1)
+      .setDisplaySize(300, 150)
+      .setOrigin(0.5)
+      .setPosition(width / 2, height / 2);
 
     const btnSize = 40, pad = 20;
     this.muteBtn = this.add.text(
@@ -137,13 +114,11 @@ class LoginScene extends Phaser.Scene {
       this.muteBtn.setText(newMuted ? '🔇' : '🔊');
     });
 
-    // Jeden handler resize: przesuwa mute + skaluje tło-wideo
+    // resize: tylko przesuwamy przycisk mute (bez skalowania wideo)
     this._onResizeMute = (gameSize) => {
       const w = gameSize?.width ?? this.scale.width;
       const h = gameSize?.height ?? this.scale.height;
-
       this.muteBtn?.setPosition(w - btnSize - pad, h - btnSize - pad);
-      this._resizeBgVideo();
     };
     this.scale.on('resize', this._onResizeMute);
 
