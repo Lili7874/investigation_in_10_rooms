@@ -37,6 +37,8 @@ export default class LevelLibrary extends BaseInvestigationScene {
       bgKey: 'bg_library',
       bgSrc: scenaBiblioteka,
       title: 'Biblioteka o świcie',
+      difficulty: 'hard', 
+
       intro: `🖼 Sceneria:
 Wysokie regały, skrzypiąca podłoga i zapach kurzu. Na jednym ze stołów leżą rozsypane kartki z katalogu, obok przewrócona lampka. W czytelni wciąż pali się zimne, zielone światło biurkowe. Drzwi do magazynu książek są niedomknięte.
 
@@ -69,31 +71,36 @@ Ustal, kto miał realną możliwość wejścia do magazynu i dostęp do sejfu, o
         {
           key: 'character1',
           src: character1,
-          text: 'To na pewno pomyłka, tylko oddawałem książki.',
+          npcId: 'rafal',
+          text: "To na pewno pomyłka, przyszedłem tylko oddać książki zaległe z prawa autorskiego i zapytać o jedną pozycję do pracy. Kamera złapała mnie przy drzwiach magazynu, bo szukałem toalety i pomyliłem korytarze – tabliczki są tam kompletnie nieczytelne o tej godzinie. Gdyby mnie naprawdę interesował sejf, nie stałbym jak idiota przed zamkniętymi drzwiami bez nawet dotknięcia klamki. Prawo własności intelektualnej to mój temat na zaliczenie, nie powód, żeby kogoś bić w czytelni.",
           avatar: { key: 'avatar1', src: avatar1 }
         },
         {
           key: 'character2',
           src: character2,
-          text: 'Miałam tylko zapytać o rękopis...',
+          npcId: 'julia',
+          text: "Miałam tylko zapytać o rękopis, bo to idealny materiał na lekcje o dawnym języku – dlatego moje nazwisko wylądowało na tej karcie rewersowej. Bibliotekarz powiedział, że regulamin pozwala jedynie na wgląd na miejscu, więc prosiłam, żeby chociaż wyjął go z sejfu i przyniósł do czytelni ‘na chwilę’. Rozmawialiśmy przy biurku pod tą zieloną lampką, a kiedy się uparł, że manuskrypt musi wrócić, zrobiło się nerwowo i coś musiało strącić lampkę. To, że karta łączy mnie z rękopisem, jeszcze nie znaczy, że to ja odpowiadam za to, co wydarzyło się potem.",
           avatar: { key: 'avatar2', src: avatar2 }
         },
         {
           key: 'character3',
           src: character3,
-          text: 'Nie życzę sobie insynuacji.',
+          npcId: 'jakub',
+          text: "Przyszedłem wcześniej tylko po to, żeby obejrzeć stanowiska na szkolną olimpiadę i ustalić z bibliotekarzem zasady wypożyczeń dla uczniów. Tak, podniosłem głos, bo jego ‘formalności’ i pieczątki są kompletnie oderwane od realiów szkoły, ale nie kłóciłem się o żaden manuskrypt w sejfie. Cały czas kręciłem się przy ladzie i katalogach, kiedy inni wchodzili głębiej między regały. Mam wystarczająco dużo problemów z rodzicami uczniów, żeby jeszcze mieszać się w kradzież zabytkowych rękopisów.",
           avatar: { key: 'avatar3', src: avatar3 }
         },
         {
           key: 'character4',
           src: character4,
-          text: 'Notowałam układ kluczy do roli!',
+          npcId: 'weronika',
+          text: "Notowałam układ kluczy w gablocie, bo gram kustoszkę, która obsesyjnie wszystko kontroluje – to był zwykły research do roli. Kiedy ktoś mnie przyłapał na wgapianiu się, specjalnie teatralnie zapytałam o znaczenie każdego kluczyka, żeby zapamiętać gesty, nie kombinacje do sejfu. Nie wchodziłam do magazynu ani nie dotykałam zamka, bardziej interesowało mnie, jak bibliotekarz odkłada pęk kluczy niż gdzie dokładnie je wkłada. Na scenie mogę zagrać złodziejkę manuskryptów, ale tutaj byłam tylko statystką w cudzym dramacie.",
           avatar: { key: 'avatar4', src: avatar4 }
         },
         {
           key: 'character5',
           src: character5,
-          text: 'Światło migało… tak koło szóstej.',
+          npcId: 'szymon',
+          text: "Siedziałem w czytelni jak co rano i słabo słyszałem, ale około 5:58 widziałem, jak bibliotekarz szeptał do telefonu, zerkając w stronę magazynu. Chwilę później światło tam zapaliło się i zgasło, dokładnie wtedy, gdy zegar w hallu uderzył szóstą. Potem ktoś wrócił z tamtej strony do czytelni, a zaraz zrobił się hałas, przewrócona lampka i te rozsypane karty katalogowe. Pamiętam też tę nauczycielkę, Julię – wcześniej długo stała przy ladzie z kartą rewersową w ręku i pytała o jakiś szczególny rękopis.",
           avatar: { key: 'avatar5', src: avatar5 }
         },
       ],

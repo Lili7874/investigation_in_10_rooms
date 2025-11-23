@@ -69,31 +69,36 @@ Ustal, kto z czterech podejrzanych wykorzystał zamieszanie w kasynie, by zabić
         {
           key: 'character1',
           src: character1,
-          text: 'Byłem przy ruletce, przysięgam.',
+          npcId: 'piotr',
+          text: "Byłem przy ruletce, przysięgam – jak zawsze, gdy próbuję ratować resztki oszczędności. Może faktycznie wyszedłem na korytarz koło 01:17, ale to tylko po to, żeby ochłonąć. Marynarka w kratę wisiała w VIP, bo wcześniej rozmawiałem tam z klientem o aucie, nic więcej. To, że logi ruletki pokazują lukę 01:16–01:23, nie robi ze mnie mordercy.",
           avatar: { key: 'avatar1', src: avatar1 }
         }, // Piotr
         {
           key: 'character2',
           src: character2,
-          text: 'As miał zagięty róg, to oszustwo!',
+          npcId: 'rafal',
+          text: "Tak, pokłóciłem się z nim o zagiętego asa – to było zwykłe oznaczanie kart, a ja nie lubię oszustów. Groziłem mu konsekwencjami, ale w sensie prawnym, nie fizycznym. Cały kluczowy moment, 01:17–01:22, spędziłem przy stole, próbując udowodnić innym, że talia jest trefna. Do VIP mnie nawet nie wpuszczono, nie mam takich pieniędzy.",
           avatar: { key: 'avatar2', src: avatar2 }
         }, // Rafał
         {
           key: 'character3',
           src: character3,
-          text: 'Wyszłam tylko na chwilę po żetony.',
+          npcId: 'alicja',
+          text: "Grałam w pokera za wysokie stawki, a on wcześniej wyśmiał moją propozycję wspólnej inwestycji, więc tak – miałam powód, żeby go nie lubić. Wyszłam po żetony, krupier potwierdzi przerwę 01:15–01:18, ale wróciłam do stołu, zanim zgasły kamery. Przy blackoutcie siedziałam nad kartami, bo przy takich kwotach nikt nie ryzykuje odejścia. VIP to nie moja scena – wolę widzieć wszystkich na otwartej sali.",
           avatar: { key: 'avatar3', src: avatar3 }
         }, // Alicja
         {
           key: 'character4',
           src: character4,
-          text: 'Rozmawiałam z nim przy barze, tyle.',
+          npcId: 'julia',
+          text: "Przyszłam tu ‘towarzysko’, a skończyło się na tym, że wymieniłam zbyt dużą sumę na żetony, żeby zapomnieć o pracy i domu. Rozmawiałam z nim przy barze mniej więcej 01:10–01:14, barman ma na to paragon na dwa drinki. Potem poszłam w stronę korytarza, ale kamery jeszcze działały i widać, że nie wchodzę do VIP o 01:19. Mam już dość skandali w swoim życiu, nie potrzebuję jeszcze jednego z trupem w roli głównej.",
           avatar: { key: 'avatar4', src: avatar4 }
         }, // Julia
         {
           key: 'character5',
           src: character5,
-          text: 'Pamiętam marynarkę w kratę… i blackout kamer.',
+          npcId: 'szymon',
+          text: "Siedziałem z boku i obserwowałem ludzi, to mi zostało po latach pracy w banku. Chwilę po 01:17 widziałem sylwetkę w marynarce w kratę przy drzwiach do VIP, tuż zanim obraz z kamer zaczął wariować. Ruletka się kręciła, ale nikt nie stawiał zakładów, było nienaturalnie cicho. Ten sprzedawca, Piotr, kręcił się wtedy między stołem a korytarzem, jak ktoś, kto ma więcej do stracenia niż tylko żetony.",
           avatar: { key: 'avatar5', src: avatar5 }
         }, // Szymon (świadek)
       ],

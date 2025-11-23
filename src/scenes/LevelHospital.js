@@ -1,4 +1,3 @@
-// src/scenes/LevelHospital.js
 /* 
 Rozstrzygnięcie (ukryta prawda – poziom 8)
 
@@ -38,6 +37,8 @@ export default class LevelHospital extends BaseInvestigationScene {
       bgKey: 'bg_hospital',
       bgSrc: scenaSzpital,
       title: 'Szpital w nocy',
+      difficulty: 'hard',
+
       intro: `🖼 Sceneria:
 Pusta sala szpitalna oświetlona bladym światłem jarzeniówek. Łóżka stoją w równych rzędach, na jednym z nich leży porzucona kroplówka. Na stoliku medycznym rozsypane są dokumenty pacjenta, a w tle słychać monotonne piknięcia aparatury. Na korytarzu unosi się zapach środków dezynfekujących i świeżo zgaszonych papierosów.
 
@@ -70,31 +71,36 @@ Twoim zadaniem jest przesłuchanie świadków i ustalenie, kto z czwórki podejr
         {
           key: 'character1',
           src: character1,
-          text: 'Przyszłam tylko odwiedzić dawnego znajomego…',
+          npcId: 'anna',
+          text: "Przyszłam tylko odwiedzić dawnego znajomego, to wszystko – nie potrzebuję oficjalnych zgód, żeby zobaczyć kogoś po operacji. Faktycznie kręciłam się przy pokoju pielęgniarek, bo chciałam pożyczyć fartuch, żeby nikt się mnie nie czepiał na korytarzu. Na tym piętrze łatwo się zgubić, więc mogłam przejść obok sali pacjenta, ale nawet do niej nie weszłam. A jeśli ktoś czuł dym przy windach, to pewnie ode mnie – nerwy robią swoje, gdy stawką jest czyjś zeznający później język.",
           avatar: { key: 'avatar1', src: avatar1 }
         }, // Anna
         {
           key: 'character2',
           src: character2,
-          text: 'Zgubiłem się między oddziałami, nic nie kombinowałem.',
+          npcId: 'tomasz',
+          text: "Przywieźli mnie z rozbitą głową, posadzili na łóżku i kazali czekać, ale nie jestem typem, który grzecznie leży pod kroplówką. Zszedłem na OIOM zobaczyć, co się dzieje, może przy okazji znaleźć coś, co da się sprzedać – ale nie znałem rozkładu oddziałów. W sali tego ważnego pacjenta nie byłem, tam wszędzie świeciły kontrolki i bałem się dotknąć czegokolwiek. Jak już kombinuję, to raczej w kieszeniach ludzi niż przy ich aparaturze.",
           avatar: { key: 'avatar2', src: avatar2 }
         }, // Tomasz
         {
           key: 'character3',
           src: character3,
-          text: 'To miała być tylko obserwacja do roli pielęgniarki.',
+          npcId: 'weronika',
+          text: "To miała być tylko obserwacja do roli pielęgniarki – ktoś z produkcji załatwił mi identyfikator, nie wnikałam, jak dokładnie. Jeśli stemple się nie zgadzają z godzinami wejścia, to raczej ich błąd niż moja intryga. Zresztą, w chwili gdy wszystko się posypało, stałam na korytarzu i notowałam, jak pielęgniarki rozmawiają między sobą, a nie przy łóżku pacjenta. Na scenie umiem udawać personel, ale tutaj nikt rozsądny nie pozwoliłby mi majstrować przy kroplówce.",
           avatar: { key: 'avatar3', src: avatar3 }
         }, // Weronika
         {
           key: 'character4',
           src: character4,
-          text: 'Szukam mamy, pracuje tu… chyba na tym piętrze.',
+          npcId: 'kacper',
+          text: "Szukam mamy, pracuje tu od niedawna i wiem tylko, że ma dyżury ‘na tym piętrze’, a nie jak się nazywa lekarz, którego miałem niby pytać. Wszędzie te dozowniki z płynem – naciskałem po drodze, bo ręce miałem spocone i strażnik patrzył krzywo. Nie dotykałem żadnych kabli ani maszyn, bo wyglądają jak coś, co wybucha, jak się pociągnie za zły przewód. Jakbym chciał komuś zrobić krzywdę, to nie tutaj, w tym całym sterylnym labiryncie.",
           avatar: { key: 'avatar4', src: avatar4 }
         }, // Kacper
         {
           key: 'character5',
           src: character5,
-          text: 'Widziałam kogoś przy kroplówce, w masce i rękawiczkach…',
+          npcId: 'marzena',
+          text: "Przywiozłam w nocy dokumenty dla jednego z pacjentów i wracając, czułam wyraźny zapach świeżo zgaszonych papierosów przy windach, choć obowiązuje zakaz. Chwilę później zajrzałam na oddział i zobaczyłam sylwetkę w fartuchu, masce i rękawiczkach, pochyloną nad kroplówką w sali pacjenta. Nie widziałam twarzy, ale ruchy były pewne, jak u kogoś, kto udaje personel, a nie jak u przestraszonego krewniaka. Pamiętam też kobietę w eleganckim stroju, Annę, która nerwowo chowała coś do torebki przy pokoju pielęgniarek, jakby nie pasowała do tego miejsca.",
           avatar: { key: 'avatar5', src: avatar5 }
         }, // Marzena (świadek)
       ],

@@ -27,6 +27,7 @@ const RAW_API =
     : 'http://localhost:3001');
 
 const API = String(RAW_API).replace(/\/+$/, '');
+const AI_DIALOG_URL = `${API}/ai/dialog`;
 
 if (isBrowser) {
   console.log('[BaseInvestigationScene] API_BASE =', API, 'host =', host);
@@ -59,6 +60,9 @@ export default class BaseInvestigationScene extends Phaser.Scene {
 
     this.shownDialogs = new Set();
     this.isPlaying = false;
+
+    // historia rozmów z NPC (key = npcId)
+    this._npcDialogHistory = {};
 
     this._introUi = [];
     this._onResize = null;
@@ -392,6 +396,14 @@ export default class BaseInvestigationScene extends Phaser.Scene {
   }
 
   showDialog(text, avatarKey) {
+    const { width, height } = this.sys.game.canvas;
+    this.dialogPanel.x = width / 1.85;
+    this.dialogPanel.y = height - 30;
+    this.dialogText.x = width * 0.2;
+    this.dialogText.y = height - 120;
+    this.avatarImage.x = width * 0.09;
+    this.avatarImage.y = height - 80;
+
     this.dialogPanel.visible = this.dialogText.visible = this.avatarImage.visible = true;
     this.dialogText.setText(text);
     if (this.avatarImage.avatarSprite) this.avatarImage.avatarSprite.destroy();
@@ -399,6 +411,7 @@ export default class BaseInvestigationScene extends Phaser.Scene {
       const ns = this._texKey(avatarKey);
       this.avatarImage.avatarSprite = this.add.sprite(this.avatarImage.x, this.avatarImage.y, ns);
       this.avatarImage.avatarSprite.setScale(0.25).setOrigin(0.5, 0.5);
+      this.avatarImage.avatarSprite.setDepth(this.avatarImage.depth + 1);
     }
   }
 
@@ -421,6 +434,59 @@ export default class BaseInvestigationScene extends Phaser.Scene {
         || pl.key || 'Miejsce';
   }
 
+  /* ==========================================
+     AI: ustala npcId dla postaci
+     ========================================== */
+  _inferNpcId(charIndex, c, displayName) {
+    if (c.npcId) return String(c.npcId);
+    if (displayName) {
+      return String(displayName).toLowerCase();
+    }
+    if (c.key) return String(c.key).toLowerCase();
+    return null;
+  }
+
+  /* ==========================================
+     AI: zapytanie do backendu
+     ========================================== */
+  async _askNpcAi({ npcId, roomId, playerMessage }) {
+    if (!npcId || !playerMessage) return null;
+
+    const history = this._npcDialogHistory[npcId] || [];
+    const body = {
+      npcId,
+      roomId,
+      playerMessage,
+      history: history.slice(-6), // maks 6 poprzednich wymian
+    };
+
+    try {
+      const res = await fetch(AI_DIALOG_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const reply =
+        data?.reply ||
+        data?.message ||
+        '...nie wiem, czy powinnam o tym mówić.';
+
+      const newHistory = [
+        ...history,
+        { role: 'user', content: String(playerMessage).slice(0, 500) },
+        { role: 'assistant', content: String(reply).slice(0, 500) },
+      ].slice(-8);
+
+      this._npcDialogHistory[npcId] = newHistory;
+      return reply;
+    } catch (e) {
+      console.warn('AI dialog error:', e);
+      return null;
+    }
+  }
+
   spawnCharacters() {
     this.characters.forEach((c, index) => {
       const spot = {
@@ -430,15 +496,47 @@ export default class BaseInvestigationScene extends Phaser.Scene {
 
       const s = this.add.sprite(spot.x, spot.y, this._texKey(c.key));
       s.setScale(typeof c.scale === 'number' ? c.scale : 1.1);
-      s.setDepth(10).setInteractive();
+      s.setDepth(10).setInteractive({ cursor: 'pointer' });
 
       const displayName = this._nameForCharacter(index, c);
+      const avatarKey = c.avatar?.key || c.avatar;
 
-      s.on('pointerdown', () => {
-        this.showDialog(c.text, c.avatar?.key || c.avatar);
-        if (!this.shownDialogs.has(c.key)) {
-          this.shownDialogs.add(c.key);
-          this.addDialogEntry(displayName, c.text, c.avatar?.key || c.avatar);
+      s.on('pointerdown', async () => {
+        // jeśli AI dostępne – pozwoli graczowi zadać pytanie
+        const npcId = this._inferNpcId(index, c, displayName);
+
+        let usedAi = false;
+
+        if (npcId) {
+          const q = window.prompt(`Co chcesz zapytać postać ${displayName}?`, '');
+          const question = (q || '').trim();
+
+          if (question) {
+            // wpis gracza w notatki
+            this.addDialogEntry('Ty', question, null);
+            this.showDialog('...', avatarKey);
+
+            const reply = await this._askNpcAi({
+              npcId,
+              roomId: this.scene.key,
+              playerMessage: question,
+            });
+
+            if (reply) {
+              usedAi = true;
+              this.showDialog(reply, avatarKey);
+              this.addDialogEntry(displayName, reply, avatarKey);
+            }
+          }
+        }
+
+        // fallback: jeśli AI nie zadziałało / brak pytania – zachowanie jak wcześniej
+        if (!usedAi) {
+          this.showDialog(c.text, avatarKey);
+          if (!this.shownDialogs.has(c.key)) {
+            this.shownDialogs.add(c.key);
+            this.addDialogEntry(displayName, c.text, avatarKey);
+          }
         }
       });
     });

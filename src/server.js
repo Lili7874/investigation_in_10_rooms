@@ -8,6 +8,7 @@ const cors = require('cors');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
+const { registerAiDialogRoutes } = require('./aiDialogRoutes');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -93,7 +94,7 @@ const SMTP_HOST = process.env.SMTP_HOST || '';
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_USER = process.env.SMTP_USER || '';
 const SMTP_PASS = process.env.SMTP_PASS || '';
-// FROM dla SMTP: 
+// FROM dla SMTP:
 const SMTP_FROM =
   process.env.SMTP_FROM || RESEND_FROM || SMTP_USER || 'no-reply@example.com';
 
@@ -630,6 +631,18 @@ app.post('/auth/reset-password', async (req, res) => {
     }
   );
 });
+
+/* =====================================================
+   AI dialog – rejestracja tras
+   ===================================================== */
+
+if (!process.env.OPENAI_API_KEY) {
+  console.warn('⚠️  AI dialog (/ai/dialog) wyłączony – brak OPENAI_API_KEY w .env');
+} else {
+  console.log('🤖 AI dialog (/ai/dialog) włączony – OPENAI_API_KEY wykryty.');
+}
+
+registerAiDialogRoutes(app);
 
 /* =====================================================
    Progress / Leaderboard

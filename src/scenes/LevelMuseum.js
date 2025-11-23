@@ -1,4 +1,3 @@
-// src/scenes/LevelMuseum.js
 /* 
 Rozstrzygnięcie (ukryta prawda – poziom 6)
 
@@ -37,6 +36,8 @@ export default class LevelMuseum extends BaseInvestigationScene {
       bgKey: 'bg_museum',
       bgSrc: scenaMuzeum,
       title: 'Muzeum sztuki w nocy',
+      difficulty: 'medium', 
+
       intro: `🖼 Sceneria:
 Wielka sala muzeum sztuki współczesnej. Na marmurowej podłodze leżą rozbite odłamki szkła z czujnika ruchu, a czerwone światła alarmu pulsują przy suficie. W kącie błyska monitor z nagraniem z kamer, na którym widać jedynie poruszoną sylwetkę.
 
@@ -69,31 +70,36 @@ Twoim zadaniem jest ustalenie, kto znał zabezpieczenia i miał okazję, by ukra
         {
           key: 'character1',
           src: character1,
-          text: 'Byłam zaproszona — tylko rozmawiałam przez telefon.',
+          npcId: 'anna',
+          text: "Byłam zaproszona jako VIP, dyrektor sam wpisał mnie na listę, więc mogłam spokojnie zadzwonić do biura przy wejściu technicznym, żeby dogadać sprawy służbowe. Ten panel obok to tylko skrzynka z cyferkami, ochroniarz wcześniej pokazywał mi, jak ‘na chwilę uciszyć’ sygnały, kiedy oprowadzał mnie po zapleczu, ale to był tylko suchy pokaz. Kiedy zrobiło się czerwono od alarmu, pobiegłam w stronę drzwi awaryjnych, bo myślałam, że tędy szybciej wyjdę na zewnątrz. Nie rozumiem, jak z krótkiej rozmowy przez telefon i przypadkowego postoju przy panelu można zrobić z mnie sprawcę całego tego chaosu.",
           avatar: { key: 'avatar1', src: avatar1 }
         },
         {
           key: 'character2',
           src: character2,
-          text: 'Przyszłam drugi raz, bo… chciałam jeszcze raz zobaczyć ekspozycję.',
+          npcId: 'marzena',
+          text: "Ten stary bilet z poprzedniej nocy? Tak, wtedy nie zdążyłam spokojnie obejrzeć wszystkiego, więc wróciłam, żeby wreszcie nacieszyć się wystawą po cichu. Cały czas kręciłam się między salą główną a sklepikiem, nie miałam po co chodzić na zaplecze czy do drzwi awaryjnych. Kiedy zawył alarm, bardziej bałam się, że zamkną mnie w środku, niż że ktoś wynosi obraz. Panel z kodami widziałam tylko z daleka i szczerze mówiąc, nie dotknęłabym tego nawet palcem.",
           avatar: { key: 'avatar2', src: avatar2 }
         },
         {
           key: 'character3',
           src: character3,
-          text: 'Robiłem zdjęcia do projektu! Mój aparat zniknął!',
+          npcId: 'kacper',
+          text: "Robiłem zdjęcia do szkolnego projektu, to wszystko – chciałem mieć fajne ujęcia obrazu, zanim sala się zapełni ludźmi. Mój aparat zniknął gdzieś w tym zamieszaniu, a jak się później okazało, kilka fotek i tak wylądowało w sieci, zanim zdążyłem wrócić do domu. Nie znam żadnych kodów do alarmu ani tego, jak działają czujniki, dla mnie to po prostu czerwone światełka nad obrazem. Jak rozległ się brzęk szkła i syrena, schowałem się za kolumną, bo myślałem, że zaraz wszyscy będą sprawdzać plecaki.",
           avatar: { key: 'avatar3', src: avatar3 }
         },
         {
           key: 'character4',
           src: character4,
-          text: 'Nie mam z tym nic wspólnego, serio.',
+          npcId: 'tomasz',
+          text: "Tak, kręciłem się przy magazynie, bo liczyłem, że znajdę coś małego i cennego, a nie obraz większy ode mnie – strażnicy i tak mnie tu kojarzą. Sejfy i plomby nawet nie drgnęły, nie jestem samobójcą, żeby grzebać przy zabezpieczeniach, których nie rozumiem. O panelu przy wejściu technicznym wiem tyle, że jak ktoś w niego źle wpisze kod, to zaraz robi się piekło dźwięków. Ja wolę kieszenie ludzi niż ich alarmy, więc od drzwi awaryjnych trzymałem się z daleka.",
           avatar: { key: 'avatar4', src: avatar4 }
         },
         {
           key: 'character5',
           src: character5,
-          text: 'Słyszałam brzęk szkła, zanim zawył alarm…',
+          npcId: 'weronika',
+          text: "Ćwiczyłam do roli kustoszki, więc chodziłam po sali i słuchałam własnych kroków, kiedy kilka minut przed alarmem usłyszałam wyraźny brzęk tłuczonego szkła przy ekspozycji. Chwilę później, z korytarza technicznego, mignął mi cień i blask telefonu zasłaniającego twarz kogoś, kto stał przy panelu, jakby wpisywał kod bez zastanowienia. Pamiętam też błysk czegoś na smyczy, jak przepustka VIP, zanim wszystko zrobiło się czerwone od świateł alarmu. Później, przy drzwiach awaryjnych, zobaczyłam już tylko strażnika leżącego na ziemi i ludzi wbiegających z ochrony.",
           avatar: { key: 'avatar5', src: avatar5 }
         },
       ],

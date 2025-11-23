@@ -55,6 +55,8 @@ Podejrzani:
 🎯 Cel gracza:
 Jako detektyw musisz przesłuchać świadków, przejrzeć biuro i zebrać dowody. Nikt nie mówi całej prawdy, a Twoim zadaniem jest zrozumieć, co wydarzyło się w nocy, zanim sprawca usunie resztki dowodów.`,
 
+      difficulty: 'easy',
+
       // === POZYCJE POSTACI ===
       positions: [
         { x: 0.34 * window.innerWidth, y: 0.58 * window.innerHeight }, // Marzena
@@ -66,11 +68,41 @@ Jako detektyw musisz przesłuchać świadków, przejrzeć biuro i zebrać dowody
 
       // === POSTACIE ===
       characters: [
-        { key: 'character1', src: character1, text: 'Nie chciałam kłopotów, serio…',          avatar: { key: 'avatar1', src: avatar1 } }, // Marzena
-        { key: 'character2', src: character2, text: 'Kręciłem się tylko chwilę przy biurku.', avatar: { key: 'avatar2', src: avatar2 } }, // Kacper
-        { key: 'character3', src: character3, text: '„Interes” to za dużo powiedziane…',      avatar: { key: 'avatar3', src: avatar3 } }, // Tomasz
-        { key: 'character4', src: character4, text: 'To były tylko rozmowy o inwestycji.',    avatar: { key: 'avatar4', src: avatar4 } }, // Piotr
-        { key: 'character5', src: character5, text: 'Zamknijmy w końcu tę noc prawdą.',       avatar: { key: 'avatar5', src: avatar5 } }, // Anna
+        {
+          key: 'character1',
+          src: character1,
+          npcId: 'marzena',
+          text: "Nie chciałam kłopotów, serio… Całą naradę siedziałam jak na szpilkach, bo bałam się, że stracę pracę, ale po spotkaniu od razu zabrałam Kacpra i wyszliśmy. Nie miałam po co wracać do open space, Paweł nawet nie był w naszym dziale. To, że mam długi, nie znaczy, że szarpałabym się z kimś przy biurku.",
+          avatar: { key: 'avatar1', src: avatar1 }
+        }, // Marzena
+        {
+          key: 'character2',
+          src: character2,
+          npcId: 'kacper',
+          text: "Kręciłem się tylko chwilę przy biurku Pawła, zanim jeszcze wszyscy byli na miejscu – wciągnął mnie ten cały sprzęt i monitor, a mama kazała mi natychmiast odejść. Po spotkaniu siedziałem już znudzony w korytarzu i czekałem, aż wszyscy skończą gadać. Na nagraniach z 00:07 mnie nie ma, wtedy dawno byliśmy poza biurem. Ja co najwyżej mógłbym coś zbić, a nie… wiecie.",
+          avatar: { key: 'avatar2', src: avatar2 }
+        }, // Kacper
+        {
+          key: 'character3',
+          src: character3,
+          npcId: 'tomasz',
+          text: "„Interes” to za dużo powiedziane, chciałem po prostu dogadać się z Pawłem o pendrive’a z danymi, które mogłyby mi pomóc stanąć na nogi. Wróciłem do open space po spotkaniu, sam, i podszedłem do jego biurka – to pewnie właśnie ten kadr z K-2 o 00:07, o którym mówicie. Śrubokręt użyłem tylko, żeby podważyć te cholerne drzwi serwisowe, jak próbowałem wyjść tyłem, nie planowałem, że dojdzie do szarpaniny. Wszystko wymknęło się spod kontroli, kiedy Paweł mnie przyłapał przy jego teczce.",
+          avatar: { key: 'avatar3', src: avatar3 }
+        }, // Tomasz
+        {
+          key: 'character4',
+          src: character4,
+          npcId: 'piotr',
+          text: "To były tylko rozmowy o inwestycji, próbowałem przekonać Annę, że jeszcze da się uratować firmę, zanim wszyscy pójdziemy na dno. Po zakończeniu narady wyszedłem razem z resztą, nie miałem powodu wracać do open space, zwłaszcza do biurka Pawła. Z tego, co pamiętam, tylko Tomasz mruknął, że ‘ma jeszcze sprawę do załatwienia’ i został z tyłu. Kamery i logi wyjść powinny to potwierdzić.",
+          avatar: { key: 'avatar4', src: avatar4 }
+        }, // Piotr
+        {
+          key: 'character5',
+          src: character5,
+          npcId: 'anna',
+          text: "Organizowałam to spotkanie i pamiętam, kto wychodził jako ostatni – Marzena z Kacprem wyszli pierwsi, potem Piotr, a ja zamknęłam salę konferencyjną około 23:52. Tomasz powiedział, że „tylko skoczy na open space”, bo musi coś dogadać z Pawłem, choć oficjalnie Pawła w ogóle nie miało być w biurze. Nikt poza nim nie miał powodu kręcić się tam jeszcze po północy. Skoro kadr z K-2 o 00:07 pokazuje kogoś przy biurku Pawła, to dobrze wiecie, kto to był.",
+          avatar: { key: 'avatar5', src: avatar5 }
+        }, // Anna
       ],
 
       // === PRZEDMIOTY (4) – ROZSZERZONE, ŁATWIEJSZE PODPOWIEDZI ===
