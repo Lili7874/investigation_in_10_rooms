@@ -1,0 +1,16 @@
+[build]
+  command = "npm run build"
+  publish = "build"
+
+# proxy do Render
+[[redirects]]
+  from = "/api/*"
+  to = "https://investigation-in-10-rooms.onrender.com/:splat"
+  status = 200
+  force = true
+
+# SPA fallback 
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
