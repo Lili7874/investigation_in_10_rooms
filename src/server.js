@@ -8,7 +8,7 @@ const cors = require('cors');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
-const { registerAiDialogRoutes } = require('./aiDialogRoutes');
+const { registerAiDialogRoutes } = require('./lib/aiDialogRoutes');
 
 const app = express();
 app.set('trust proxy', 1);

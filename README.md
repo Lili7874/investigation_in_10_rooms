@@ -180,8 +180,8 @@ Nie.
 📄 Licencja
 Projekt autorski, stworzony jako praca inżynierska.
 
-🎉 Podziękowania
-Dziękuję za skorzystanie z gry!
+🎉 Informacja
+Wersja demonstracyjna gry dostępna jest pod adresem:
 Zagraj tutaj:
 
 👉 https://investigationin10rooms.online
